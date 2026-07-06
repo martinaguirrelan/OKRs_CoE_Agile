@@ -1,0 +1,13 @@
+# Todo lo que clasp NO debe subir a Apps Script.
+**/**
+!appsscript.json
+!Code.gs
+!Database.gs
+!Okr.gs
+!Iniciativas.gs
+!ScrumMasters.gs
+!Checkins.gs
+!Reports.gs
+!Index.html
+!Stylesheet.html
+!JavaScript.html

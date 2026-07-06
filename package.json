@@ -1,0 +1,17 @@
+{
+  "name": "okrs-coe-agile",
+  "version": "1.0.0",
+  "description": "App Apps Script para gestionar OKRs de un Centro de Excelencia Ágil",
+  "private": true,
+  "scripts": {
+    "login": "clasp login",
+    "create": "clasp create --type sheets --title \"OKRs CoE Agile\" --rootDir .",
+    "push": "clasp push",
+    "pull": "clasp pull",
+    "deploy": "clasp deploy --description \"OKRs CoE Agile web app\"",
+    "open": "clasp open"
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2"
+  }
+}
