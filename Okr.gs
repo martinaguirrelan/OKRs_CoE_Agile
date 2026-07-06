@@ -85,11 +85,15 @@ function saveKeyResult(data) {
   return upsert_(SHEETS.KEY_RESULTS, kr);
 }
 
-/** Elimina un KR y sus check-ins. */
+/** Elimina un KR, sus check-ins y sus iniciativas. */
 function deleteKeyResult(id) {
   const checkins = readAll_(SHEETS.CHECKINS).filter(function (c) {
     return String(c.krId) === String(id);
   });
   checkins.forEach(function (c) { remove_(SHEETS.CHECKINS, c.id); });
+  const iniciativas = readAll_(SHEETS.INICIATIVAS).filter(function (i) {
+    return String(i.krId) === String(id);
+  });
+  iniciativas.forEach(function (i) { remove_(SHEETS.INICIATIVAS, i.id); });
   return remove_(SHEETS.KEY_RESULTS, id);
 }

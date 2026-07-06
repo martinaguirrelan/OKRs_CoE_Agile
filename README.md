@@ -5,9 +5,10 @@ Aplicación en **Google Apps Script** para gestionar los OKRs de un Centro de Ex
 ## Funcionalidades
 
 - **Registrar OKRs** — Alta y edición de Objetivos y Key Results (dueño, trimestre, baseline, meta, valor actual).
-- **Dashboard** — Árbol de objetivos con progreso por KR y objetivo, semáforo de estado (on-track / en riesgo / fuera de ruta) y tarjetas de resumen. Filtro por trimestre.
+- **Iniciativas** — Iniciativas ágiles (épicas/proyectos) que contribuyen a cada KR, con estado (pendiente / en progreso / bloqueada / hecha), sprint y **Scrum Master** asignado. Incluye un catálogo de Scrum Masters administrable desde la propia interfaz.
+- **Dashboard** — Árbol de objetivos con progreso por KR y objetivo, iniciativas anidadas bajo cada KR, semáforo de estado (on-track / en riesgo / fuera de ruta) y tarjetas de resumen. Filtro por trimestre.
 - **Check-ins** — Actualizaciones periódicas de avance; cada check-in recalcula el progreso del KR y guarda historial con nivel de confianza y comentario.
-- **Reportes** — Genera una hoja "Reporte {trimestre}" dentro del Spreadsheet, lista para revisar o exportar a PDF.
+- **Reportes** — Genera una hoja "Reporte {trimestre}" dentro del Spreadsheet (objetivos, KRs e iniciativas), lista para revisar o exportar a PDF.
 
 ## Modelo de datos (hojas)
 
@@ -16,6 +17,8 @@ Aplicación en **Google Apps Script** para gestionar los OKRs de un Centro de Ex
 | `Objetivos` | id, titulo, dueno, trimestre, estado, descripcion, creadoEn |
 | `KeyResults` | id, objetivoId, descripcion, dueno, unidad, baseline, meta, actual, progreso, estado |
 | `Checkins` | id, krId, fecha, valor, progreso, confianza, comentario, autor |
+| `Iniciativas` | id, krId, titulo, scrumMasterId, estado, sprint, descripcion, creadoEn |
+| `ScrumMasters` | id, nombre, equipo |
 
 El progreso de un KR se calcula como `(actual - baseline) / (meta - baseline)` acotado a 0–100 %. El progreso de un objetivo es el promedio de sus KRs. Estados: `>=70` on-track, `40–69` en riesgo, `<40` fuera de ruta.
 
@@ -26,6 +29,8 @@ appsscript.json     Manifiesto (scopes, runtime V8, web app)
 Code.gs             doGet, menú onOpen, include()
 Database.gs         Capa de acceso a Sheets (CRUD genérico + esquema)
 Okr.gs              Lógica de Objetivos y Key Results
+Iniciativas.gs      Iniciativas ágiles ligadas a cada KR
+ScrumMasters.gs     Catálogo de Scrum Masters
 Checkins.gs         Registro de check-ins y recálculo de progreso
 Reports.gs          Agregaciones del dashboard y reporte por trimestre
 Index.html          Estructura de la interfaz (pestañas)

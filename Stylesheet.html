@@ -88,4 +88,21 @@
   .toast.err { background: var(--red); }
   .row-actions { display: flex; gap: 6px; }
   .inline { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+
+  /* Scrum Masters (chips) */
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; background: #eef2ff; color: #3730a3;
+    border: 1px solid #e0e7ff; padding: 5px 10px; border-radius: 999px; font-size: 12px; margin: 0 6px 6px 0;
+  }
+  .chip a { cursor: pointer; color: var(--brand); font-weight: 600; }
+  .chip a.danger { color: var(--red); }
+
+  /* Iniciativas bajo un KR */
+  .inis { margin: 6px 0 2px 6px; padding-left: 10px; border-left: 2px solid var(--line); }
+  .ini-row { font-size: 12.5px; padding: 3px 0; display: flex; align-items: center; gap: 6px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.pendiente { background: #94a3b8; }
+  .dot.en-progreso { background: var(--brand); }
+  .dot.bloqueada { background: var(--red); }
+  .dot.hecha { background: var(--green); }
 </style>

@@ -1,6 +1,8 @@
 <script>
   // Estado en memoria del cliente.
-  var STATE = { objetivos: [], keyResults: [], checkins: [], tree: [], trimestres: [], resumen: {} };
+  var STATE = { objetivos: [], keyResults: [], checkins: [], iniciativas: [], scrumMasters: [], tree: [], trimestres: [], resumen: {} };
+
+  var ESTADO_INI_LABEL = { 'pendiente': 'Pendiente', 'en-progreso': 'En progreso', 'bloqueada': 'Bloqueada', 'hecha': 'Hecha' };
 
   // ---------- Utilidades ----------
   function $(id) { return document.getElementById(id); }
@@ -47,9 +49,13 @@
     fillSelect($('rep_trimestre'), STATE.trimestres, null);
     fillObjetivoSelect();
     fillKrSelect();
+    fillIniKrSelect();
+    fillScrumMasterSelect();
     renderResumen();
     renderTree();
     renderOkrList();
+    renderScrumMasters();
+    renderIniciativas();
     renderCheckins();
   }
 
@@ -66,10 +72,25 @@
     }).join('') || '<option value="">— Crea un objetivo primero —</option>';
   }
 
-  function fillKrSelect() {
-    $('chk_krId').innerHTML = STATE.keyResults.map(function (kr) {
+  function krOptions() {
+    return STATE.keyResults.map(function (kr) {
       return '<option value="' + esc(kr.id) + '">' + esc(kr.descripcion) + '</option>';
     }).join('') || '<option value="">— Crea un Key Result primero —</option>';
+  }
+  function fillKrSelect() { $('chk_krId').innerHTML = krOptions(); }
+  function fillIniKrSelect() { $('ini_krId').innerHTML = krOptions(); }
+
+  function fillScrumMasterSelect() {
+    $('ini_scrumMasterId').innerHTML = '<option value="">— Sin asignar —</option>' +
+      STATE.scrumMasters.map(function (sm) {
+        var etiqueta = sm.nombre + (sm.equipo ? ' (' + sm.equipo + ')' : '');
+        return '<option value="' + esc(sm.id) + '">' + esc(etiqueta) + '</option>';
+      }).join('');
+  }
+
+  function smNombre(id) {
+    var sm = STATE.scrumMasters.filter(function (s) { return s.id === id; })[0];
+    return sm ? sm.nombre : '';
   }
 
   // ---------- Dashboard ----------
@@ -78,6 +99,7 @@
     var cards = [
       ['Objetivos', r.objetivos || 0],
       ['Key Results', r.keyResults || 0],
+      ['Iniciativas', (r.iniciativasHechas || 0) + '/' + (r.iniciativas || 0)],
       ['Progreso prom.', (r.progresoPromedio || 0) + '%'],
       ['On track', r.onTrack || 0],
       ['En riesgo', r.atRisk || 0],
@@ -98,10 +120,17 @@
     if (!tree.length) { $('tree').innerHTML = '<div class="empty">Aún no hay objetivos. Ve a “Registrar OKRs”.</div>'; return; }
     $('tree').innerHTML = tree.map(function (n) {
       var krs = n.keyResults.map(function (kr) {
+        var inis = (kr.iniciativas || []).map(function (i) {
+          var sm = i.scrumMasterNombre ? ' · SM: ' + esc(i.scrumMasterNombre) : '';
+          var sp = i.sprint ? ' · ' + esc(i.sprint) : '';
+          return '<div class="ini-row"><span class="dot ' + i.estado + '"></span>' + esc(i.titulo) +
+            '<span class="meta">' + sm + sp + '</span></div>';
+        }).join('');
+        var inisWrap = inis ? '<div class="inis">' + inis + '</div>' : '';
         return '<div class="kr"><div class="kr-row"><div>' + esc(kr.descripcion) +
           ' <span class="meta">' + esc(kr.actual) + '/' + esc(kr.meta) + ' ' + esc(kr.unidad || '') + '</span></div>' +
           '<span class="pill ' + kr.estado + '">' + kr.progreso + '%</span></div>' +
-          bar(kr.progreso, kr.estado) + '</div>';
+          bar(kr.progreso, kr.estado) + inisWrap + '</div>';
       }).join('') || '<div class="meta" style="padding:8px 0">Sin Key Results.</div>';
       return '<div class="obj"><div class="obj-head"><div><div class="obj-title">' + esc(n.objetivo.titulo) +
         '</div><div class="meta">' + esc(n.objetivo.dueno || 'Sin dueño') + ' · ' + esc(n.objetivo.trimestre) + '</div></div>' +
@@ -188,6 +217,86 @@
     if (!confirm('¿Eliminar este Key Result y sus check-ins?')) return;
     google.script.run.withSuccessHandler(function () { toast('Key Result eliminado'); refresh(); })
       .withFailureHandler(function (e) { toast(e.message || e, true); }).deleteKeyResult(id);
+  };
+
+  // ---------- Scrum Masters ----------
+  $('smForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var data = { id: $('sm_id').value, nombre: $('sm_nombre').value, equipo: $('sm_equipo').value };
+    google.script.run
+      .withSuccessHandler(function () { toast('Scrum Master guardado'); $('smForm').reset(); $('sm_id').value = ''; refresh(); })
+      .withFailureHandler(function (err) { toast(err.message || err, true); })
+      .saveScrumMaster(data);
+  });
+
+  function renderScrumMasters() {
+    if (!STATE.scrumMasters.length) { $('smList').innerHTML = '<div class="meta">Aún no hay Scrum Masters. Añade el primero arriba.</div>'; return; }
+    $('smList').innerHTML = STATE.scrumMasters.map(function (sm) {
+      return '<span class="chip">' + esc(sm.nombre) + (sm.equipo ? ' · ' + esc(sm.equipo) : '') +
+        ' <a onclick="editSm(\'' + sm.id + '\')">editar</a>' +
+        ' <a class="danger" onclick="delSm(\'' + sm.id + '\')">✕</a></span>';
+    }).join('');
+  }
+  window.editSm = function (id) {
+    var sm = STATE.scrumMasters.filter(function (x) { return x.id === id; })[0];
+    if (!sm) return;
+    $('sm_id').value = sm.id; $('sm_nombre').value = sm.nombre; $('sm_equipo').value = sm.equipo;
+    $('sm_nombre').focus();
+  };
+  window.delSm = function (id) {
+    if (!confirm('¿Eliminar este Scrum Master? Sus iniciativas quedarán sin asignar.')) return;
+    google.script.run.withSuccessHandler(function () { toast('Scrum Master eliminado'); refresh(); })
+      .withFailureHandler(function (e) { toast(e.message || e, true); }).deleteScrumMaster(id);
+  };
+
+  // ---------- Iniciativas ----------
+  $('iniForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var data = {
+      id: $('ini_id').value,
+      krId: $('ini_krId').value,
+      titulo: $('ini_titulo').value,
+      scrumMasterId: $('ini_scrumMasterId').value,
+      estado: $('ini_estado').value,
+      sprint: $('ini_sprint').value,
+      descripcion: $('ini_descripcion').value
+    };
+    google.script.run
+      .withSuccessHandler(function () { toast('Iniciativa guardada'); $('iniForm').reset(); $('ini_id').value = ''; refresh(); })
+      .withFailureHandler(function (err) { toast(err.message || err, true); })
+      .saveIniciativa(data);
+  });
+  $('iniReset').addEventListener('click', function () { $('iniForm').reset(); $('ini_id').value = ''; });
+
+  function krDescById(krId) {
+    var kr = STATE.keyResults.filter(function (k) { return k.id === krId; })[0];
+    return kr ? kr.descripcion : krId;
+  }
+  function renderIniciativas() {
+    if (!STATE.iniciativas.length) { $('iniList').innerHTML = '<div class="empty">Sin iniciativas aún.</div>'; return; }
+    var rows = STATE.iniciativas.map(function (i) {
+      return '<tr><td><span class="dot ' + i.estado + '"></span>' + esc(i.titulo) + '</td>' +
+        '<td>' + esc(krDescById(i.krId)) + '</td>' +
+        '<td>' + esc(smNombre(i.scrumMasterId) || '—') + '</td>' +
+        '<td>' + esc(ESTADO_INI_LABEL[i.estado] || i.estado) + '</td>' +
+        '<td>' + esc(i.sprint || '') + '</td>' +
+        '<td><div class="row-actions"><button class="ghost" onclick="editIni(\'' + i.id + '\')">Editar</button>' +
+        '<button class="ghost danger" onclick="delIni(\'' + i.id + '\')">✕</button></div></td></tr>';
+    }).join('');
+    $('iniList').innerHTML = '<table><thead><tr><th>Iniciativa</th><th>Key Result</th><th>Scrum Master</th><th>Estado</th><th>Sprint</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+  window.editIni = function (id) {
+    var i = STATE.iniciativas.filter(function (x) { return x.id === id; })[0];
+    if (!i) return;
+    $('ini_id').value = i.id; $('ini_krId').value = i.krId; $('ini_titulo').value = i.titulo;
+    $('ini_scrumMasterId').value = i.scrumMasterId; $('ini_estado').value = i.estado;
+    $('ini_sprint').value = i.sprint; $('ini_descripcion').value = i.descripcion;
+    $('ini_titulo').scrollIntoView({ behavior: 'smooth' });
+  };
+  window.delIni = function (id) {
+    if (!confirm('¿Eliminar esta iniciativa?')) return;
+    google.script.run.withSuccessHandler(function () { toast('Iniciativa eliminada'); refresh(); })
+      .withFailureHandler(function (e) { toast(e.message || e, true); }).deleteIniciativa(id);
   };
 
   // ---------- Check-ins ----------

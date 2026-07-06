@@ -13,6 +13,7 @@
   <nav class="tabs">
     <button class="tab active" data-view="dashboard">Dashboard</button>
     <button class="tab" data-view="okrs">Registrar OKRs</button>
+    <button class="tab" data-view="iniciativas">Iniciativas</button>
     <button class="tab" data-view="checkins">Check-ins</button>
     <button class="tab" data-view="reportes">Reportes</button>
   </nav>
@@ -86,6 +87,67 @@
 
       <h3>Objetivos y KRs registrados</h3>
       <div id="okrList"></div>
+    </section>
+
+    <!-- INICIATIVAS -->
+    <section id="iniciativas" class="view">
+      <form id="smForm">
+        <h2>Scrum Masters</h2>
+        <div class="inline">
+          <div style="flex:1">
+            <label>Nombre *</label>
+            <input id="sm_nombre" placeholder="Nombre del Scrum Master">
+          </div>
+          <div style="flex:1">
+            <label>Equipo</label>
+            <input id="sm_equipo" placeholder="Equipo / squad">
+          </div>
+          <button type="submit" class="primary">Añadir</button>
+        </div>
+        <input type="hidden" id="sm_id">
+        <div id="smList" style="margin-top:12px"></div>
+      </form>
+
+      <form id="iniForm">
+        <h2>Nueva iniciativa</h2>
+        <input type="hidden" id="ini_id">
+        <div class="field">
+          <label>Key Result *</label>
+          <select id="ini_krId"></select>
+        </div>
+        <div class="field">
+          <label>Título de la iniciativa *</label>
+          <input id="ini_titulo" placeholder="Ej. Implementar tablero Kanban en Jira">
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Scrum Master</label>
+            <select id="ini_scrumMasterId"></select>
+          </div>
+          <div class="field">
+            <label>Estado</label>
+            <select id="ini_estado">
+              <option value="pendiente">Pendiente</option>
+              <option value="en-progreso">En progreso</option>
+              <option value="bloqueada">Bloqueada</option>
+              <option value="hecha">Hecha</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Sprint</label>
+          <input id="ini_sprint" placeholder="Ej. Sprint 12">
+        </div>
+        <div class="field">
+          <label>Descripción</label>
+          <textarea id="ini_descripcion" placeholder="Alcance de la iniciativa"></textarea>
+        </div>
+        <button type="submit" class="primary">Guardar iniciativa</button>
+        <button type="button" class="ghost" id="iniReset">Limpiar</button>
+      </form>
+
+      <h3>Iniciativas registradas</h3>
+      <div id="iniList"></div>
     </section>
 
     <!-- CHECK-INS -->

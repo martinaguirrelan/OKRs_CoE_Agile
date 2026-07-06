@@ -12,9 +12,21 @@ function buildOkrTree_(trimestre) {
     return !trimestre || String(o.trimestre) === String(trimestre);
   });
   const krs = listKeyResults();
+  const iniciativas = listIniciativas();
+  const scrumMasters = listScrumMasters();
+  const smById = {};
+  scrumMasters.forEach(function (sm) { smById[sm.id] = sm.nombre; });
+
   return objetivos.map(function (o) {
     const hijos = krs.filter(function (kr) {
       return String(kr.objetivoId) === String(o.id);
+    }).map(function (kr) {
+      const inis = iniciativas.filter(function (i) {
+        return String(i.krId) === String(kr.id);
+      }).map(function (i) {
+        return Object.assign({}, i, { scrumMasterNombre: smById[i.scrumMasterId] || '' });
+      });
+      return Object.assign({}, kr, { iniciativas: inis });
     });
     const progreso = hijos.length
       ? Math.round(hijos.reduce(function (s, kr) { return s + (Number(kr.progreso) || 0); }, 0) / hijos.length)
@@ -38,6 +50,8 @@ function getBootstrapData() {
     objetivos: listObjetivos(),
     keyResults: listKeyResults(),
     checkins: listCheckins(),
+    iniciativas: listIniciativas(),
+    scrumMasters: listScrumMasters(),
     trimestres: trimestres,
     resumen: resumen_(tree),
     generadoEn: new Date().toISOString()
@@ -46,7 +60,7 @@ function getBootstrapData() {
 
 function resumen_(tree) {
   const totalObj = tree.length;
-  let totalKR = 0, onTrack = 0, atRisk = 0, offTrack = 0, sumProg = 0;
+  let totalKR = 0, onTrack = 0, atRisk = 0, offTrack = 0, sumProg = 0, totalIni = 0, iniHechas = 0;
   tree.forEach(function (n) {
     totalKR += n.keyResults.length;
     n.keyResults.forEach(function (kr) {
@@ -54,11 +68,17 @@ function resumen_(tree) {
       if (kr.estado === ESTADOS.ON_TRACK) onTrack++;
       else if (kr.estado === ESTADOS.AT_RISK) atRisk++;
       else offTrack++;
+      (kr.iniciativas || []).forEach(function (i) {
+        totalIni++;
+        if (i.estado === 'hecha') iniHechas++;
+      });
     });
   });
   return {
     objetivos: totalObj,
     keyResults: totalKR,
+    iniciativas: totalIni,
+    iniciativasHechas: iniHechas,
     onTrack: onTrack,
     atRisk: atRisk,
     offTrack: offTrack,
@@ -85,11 +105,14 @@ function generarReporteTrimestre(trimestre) {
   if (sheet) ss.deleteSheet(sheet);
   sheet = ss.insertSheet(nombre);
 
-  const filas = [['Tipo', 'Objetivo / Key Result', 'Dueño', 'Progreso %', 'Estado', 'Meta', 'Actual']];
+  const filas = [['Tipo', 'Objetivo / Key Result / Iniciativa', 'Dueño / Scrum Master', 'Progreso %', 'Estado', 'Meta', 'Actual']];
   tree.forEach(function (n) {
     filas.push(['Objetivo', n.objetivo.titulo, n.objetivo.dueno, n.progreso, n.estado, '', '']);
     n.keyResults.forEach(function (kr) {
       filas.push(['  KR', kr.descripcion, kr.dueno, kr.progreso, kr.estado, kr.meta, kr.actual]);
+      (kr.iniciativas || []).forEach(function (i) {
+        filas.push(['    Iniciativa', i.titulo, i.scrumMasterNombre || '', '', i.estado, i.sprint || '', '']);
+      });
     });
   });
   if (filas.length === 1) filas.push(['—', 'Sin objetivos en este trimestre', '', '', '', '', '']);

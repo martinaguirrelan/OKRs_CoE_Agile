@@ -16,6 +16,14 @@ const SHEETS = {
   CHECKINS: {
     name: 'Checkins',
     headers: ['id', 'krId', 'fecha', 'valor', 'progreso', 'confianza', 'comentario', 'autor']
+  },
+  INICIATIVAS: {
+    name: 'Iniciativas',
+    headers: ['id', 'krId', 'titulo', 'scrumMasterId', 'estado', 'sprint', 'descripcion', 'creadoEn']
+  },
+  SCRUM_MASTERS: {
+    name: 'ScrumMasters',
+    headers: ['id', 'nombre', 'equipo']
   }
 };
 
