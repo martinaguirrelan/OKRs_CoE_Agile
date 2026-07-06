@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= include('Stylesheet'); ?>
+</head>
+<body>
+  <header>
+    <h1>OKRs · Centro de Excelencia Ágil</h1>
+    <p>Registra objetivos, sigue el avance y reporta por trimestre</p>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-view="dashboard">Dashboard</button>
+    <button class="tab" data-view="okrs">Registrar OKRs</button>
+    <button class="tab" data-view="checkins">Check-ins</button>
+    <button class="tab" data-view="reportes">Reportes</button>
+  </nav>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="view active">
+      <div class="inline" style="margin-bottom:12px">
+        <div>
+          <label>Filtrar por trimestre</label>
+          <select id="dashTrimestre"><option value="">Todos</option></select>
+        </div>
+      </div>
+      <div class="cards" id="resumen"></div>
+      <div id="tree"></div>
+    </section>
+
+    <!-- REGISTRAR OKRs -->
+    <section id="okrs" class="view">
+      <form id="objForm">
+        <h2>Nuevo objetivo</h2>
+        <input type="hidden" id="obj_id">
+        <div class="field">
+          <label>Título del objetivo *</label>
+          <input id="obj_titulo" placeholder="Ej. Elevar la madurez ágil de los equipos">
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Dueño</label>
+            <input id="obj_dueno" placeholder="Nombre / rol">
+          </div>
+          <div class="field">
+            <label>Trimestre *</label>
+            <input id="obj_trimestre" placeholder="2026-Q3">
+          </div>
+        </div>
+        <div class="field">
+          <label>Descripción</label>
+          <textarea id="obj_descripcion" placeholder="Contexto y motivación del objetivo"></textarea>
+        </div>
+        <button type="submit" class="primary">Guardar objetivo</button>
+        <button type="button" class="ghost" id="objReset">Limpiar</button>
+      </form>
+
+      <form id="krForm">
+        <h2>Nuevo Key Result</h2>
+        <input type="hidden" id="kr_id">
+        <div class="field">
+          <label>Objetivo *</label>
+          <select id="kr_objetivoId"></select>
+        </div>
+        <div class="field">
+          <label>Descripción del KR *</label>
+          <input id="kr_descripcion" placeholder="Ej. Aumentar velocity promedio de 20 a 30 pts">
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Dueño</label><input id="kr_dueno"></div>
+          <div class="field"><label>Unidad</label><input id="kr_unidad" placeholder="pts, %, nº..."></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Baseline</label><input id="kr_baseline" type="number" step="any" value="0"></div>
+          <div class="field"><label>Meta *</label><input id="kr_meta" type="number" step="any"></div>
+        </div>
+        <div class="field">
+          <label>Valor actual</label>
+          <input id="kr_actual" type="number" step="any" placeholder="Por defecto = baseline">
+        </div>
+        <button type="submit" class="primary">Guardar Key Result</button>
+        <button type="button" class="ghost" id="krReset">Limpiar</button>
+      </form>
+
+      <h3>Objetivos y KRs registrados</h3>
+      <div id="okrList"></div>
+    </section>
+
+    <!-- CHECK-INS -->
+    <section id="checkins" class="view">
+      <form id="chkForm">
+        <h2>Registrar check-in</h2>
+        <div class="field">
+          <label>Key Result *</label>
+          <select id="chk_krId"></select>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Valor actual *</label><input id="chk_valor" type="number" step="any"></div>
+          <div class="field">
+            <label>Confianza</label>
+            <select id="chk_confianza">
+              <option value="alta">Alta</option>
+              <option value="media" selected>Media</option>
+              <option value="baja">Baja</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Autor</label><input id="chk_autor"></div>
+          <div class="field"><label>Fecha</label><input id="chk_fecha" type="date"></div>
+        </div>
+        <div class="field">
+          <label>Comentario</label>
+          <textarea id="chk_comentario" placeholder="¿Qué avanzó? ¿Qué bloquea?"></textarea>
+        </div>
+        <button type="submit" class="primary">Registrar check-in</button>
+      </form>
+
+      <h3>Historial de check-ins</h3>
+      <div id="chkList"></div>
+    </section>
+
+    <!-- REPORTES -->
+    <section id="reportes" class="view">
+      <form id="repForm">
+        <h2>Generar reporte por trimestre</h2>
+        <div class="inline">
+          <div>
+            <label>Trimestre</label>
+            <select id="rep_trimestre"></select>
+          </div>
+          <button type="submit" class="primary">Generar en Sheet</button>
+        </div>
+      </form>
+      <div id="repResult"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <?!= include('JavaScript'); ?>
+</body>
+</html>

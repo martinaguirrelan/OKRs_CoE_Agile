@@ -1,0 +1,247 @@
+<script>
+  // Estado en memoria del cliente.
+  var STATE = { objetivos: [], keyResults: [], checkins: [], tree: [], trimestres: [], resumen: {} };
+
+  // ---------- Utilidades ----------
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function toast(msg, isErr) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isErr ? ' err' : '');
+    setTimeout(function () { t.className = 'toast'; }, 2600);
+  }
+  function estadoLabel(e) {
+    return { 'on-track': 'On track', 'at-risk': 'En riesgo', 'off-track': 'Fuera de ruta' }[e] || e;
+  }
+
+  // ---------- Navegación por pestañas ----------
+  document.querySelectorAll('.tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+      document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('active'); });
+      tab.classList.add('active');
+      $(tab.dataset.view).classList.add('active');
+    });
+  });
+
+  // ---------- Carga inicial ----------
+  function bootstrap() {
+    google.script.run
+      .withSuccessHandler(function (data) {
+        STATE = data;
+        renderAll();
+      })
+      .withFailureHandler(function (err) { toast(err.message || err, true); })
+      .getBootstrapData();
+  }
+
+  function refresh() { bootstrap(); }
+
+  function renderAll() {
+    fillSelect($('dashTrimestre'), STATE.trimestres, 'Todos');
+    fillSelect($('rep_trimestre'), STATE.trimestres, null);
+    fillObjetivoSelect();
+    fillKrSelect();
+    renderResumen();
+    renderTree();
+    renderOkrList();
+    renderCheckins();
+  }
+
+  function fillSelect(sel, values, allLabel) {
+    var current = sel.value;
+    sel.innerHTML = (allLabel != null ? '<option value="">' + esc(allLabel) + '</option>' : '') +
+      values.map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('');
+    if (current) sel.value = current;
+  }
+
+  function fillObjetivoSelect() {
+    $('kr_objetivoId').innerHTML = STATE.objetivos.map(function (o) {
+      return '<option value="' + esc(o.id) + '">' + esc(o.titulo) + ' (' + esc(o.trimestre) + ')</option>';
+    }).join('') || '<option value="">— Crea un objetivo primero —</option>';
+  }
+
+  function fillKrSelect() {
+    $('chk_krId').innerHTML = STATE.keyResults.map(function (kr) {
+      return '<option value="' + esc(kr.id) + '">' + esc(kr.descripcion) + '</option>';
+    }).join('') || '<option value="">— Crea un Key Result primero —</option>';
+  }
+
+  // ---------- Dashboard ----------
+  function renderResumen() {
+    var r = STATE.resumen || {};
+    var cards = [
+      ['Objetivos', r.objetivos || 0],
+      ['Key Results', r.keyResults || 0],
+      ['Progreso prom.', (r.progresoPromedio || 0) + '%'],
+      ['On track', r.onTrack || 0],
+      ['En riesgo', r.atRisk || 0],
+      ['Fuera de ruta', r.offTrack || 0]
+    ];
+    $('resumen').innerHTML = cards.map(function (c) {
+      return '<div class="card"><div class="n">' + esc(c[1]) + '</div><div class="l">' + esc(c[0]) + '</div></div>';
+    }).join('');
+  }
+
+  function bar(progreso, estado) {
+    return '<div class="bar ' + estado + '"><span style="width:' + progreso + '%"></span></div>';
+  }
+
+  function renderTree() {
+    var filtro = $('dashTrimestre').value;
+    var tree = STATE.tree.filter(function (n) { return !filtro || n.objetivo.trimestre === filtro; });
+    if (!tree.length) { $('tree').innerHTML = '<div class="empty">Aún no hay objetivos. Ve a “Registrar OKRs”.</div>'; return; }
+    $('tree').innerHTML = tree.map(function (n) {
+      var krs = n.keyResults.map(function (kr) {
+        return '<div class="kr"><div class="kr-row"><div>' + esc(kr.descripcion) +
+          ' <span class="meta">' + esc(kr.actual) + '/' + esc(kr.meta) + ' ' + esc(kr.unidad || '') + '</span></div>' +
+          '<span class="pill ' + kr.estado + '">' + kr.progreso + '%</span></div>' +
+          bar(kr.progreso, kr.estado) + '</div>';
+      }).join('') || '<div class="meta" style="padding:8px 0">Sin Key Results.</div>';
+      return '<div class="obj"><div class="obj-head"><div><div class="obj-title">' + esc(n.objetivo.titulo) +
+        '</div><div class="meta">' + esc(n.objetivo.dueno || 'Sin dueño') + ' · ' + esc(n.objetivo.trimestre) + '</div></div>' +
+        '<span class="pill ' + n.estado + '">' + n.progreso + '%</span></div>' +
+        bar(n.progreso, n.estado) + '<div style="margin-top:8px">' + krs + '</div></div>';
+    }).join('');
+  }
+  document.getElementById('dashTrimestre').addEventListener('change', renderTree);
+
+  // ---------- Registrar OKRs ----------
+  $('objForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var data = {
+      id: $('obj_id').value,
+      titulo: $('obj_titulo').value,
+      dueno: $('obj_dueno').value,
+      trimestre: $('obj_trimestre').value,
+      descripcion: $('obj_descripcion').value
+    };
+    google.script.run
+      .withSuccessHandler(function () { toast('Objetivo guardado'); $('objForm').reset(); $('obj_id').value = ''; refresh(); })
+      .withFailureHandler(function (err) { toast(err.message || err, true); })
+      .saveObjetivo(data);
+  });
+  $('objReset').addEventListener('click', function () { $('objForm').reset(); $('obj_id').value = ''; });
+
+  $('krForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var data = {
+      id: $('kr_id').value,
+      objetivoId: $('kr_objetivoId').value,
+      descripcion: $('kr_descripcion').value,
+      dueno: $('kr_dueno').value,
+      unidad: $('kr_unidad').value,
+      baseline: $('kr_baseline').value,
+      meta: $('kr_meta').value,
+      actual: $('kr_actual').value
+    };
+    google.script.run
+      .withSuccessHandler(function () { toast('Key Result guardado'); $('krForm').reset(); $('kr_id').value = ''; refresh(); })
+      .withFailureHandler(function (err) { toast(err.message || err, true); })
+      .saveKeyResult(data);
+  });
+  $('krReset').addEventListener('click', function () { $('krForm').reset(); $('kr_id').value = ''; });
+
+  function renderOkrList() {
+    if (!STATE.objetivos.length) { $('okrList').innerHTML = '<div class="empty">Sin objetivos aún.</div>'; return; }
+    $('okrList').innerHTML = STATE.objetivos.map(function (o) {
+      var krs = STATE.keyResults.filter(function (k) { return k.objetivoId === o.id; });
+      var krHtml = krs.map(function (kr) {
+        return '<div class="kr"><div class="kr-row"><div>' + esc(kr.descripcion) + ' <span class="pill ' + kr.estado + '">' + kr.progreso + '%</span></div>' +
+          '<div class="row-actions"><button class="ghost" onclick="editKr(\'' + kr.id + '\')">Editar</button>' +
+          '<button class="ghost danger" onclick="delKr(\'' + kr.id + '\')">Eliminar</button></div></div></div>';
+      }).join('') || '<div class="meta" style="padding:6px 0">Sin KRs.</div>';
+      return '<div class="obj"><div class="obj-head"><div class="obj-title">' + esc(o.titulo) + '</div>' +
+        '<div class="row-actions"><button class="ghost" onclick="editObj(\'' + o.id + '\')">Editar</button>' +
+        '<button class="ghost danger" onclick="delObj(\'' + o.id + '\')">Eliminar</button></div></div>' +
+        '<div class="meta">' + esc(o.dueno || 'Sin dueño') + ' · ' + esc(o.trimestre) + '</div>' +
+        '<div style="margin-top:8px">' + krHtml + '</div></div>';
+    }).join('');
+  }
+
+  window.editObj = function (id) {
+    var o = STATE.objetivos.filter(function (x) { return x.id === id; })[0];
+    if (!o) return;
+    $('obj_id').value = o.id; $('obj_titulo').value = o.titulo; $('obj_dueno').value = o.dueno;
+    $('obj_trimestre').value = o.trimestre; $('obj_descripcion').value = o.descripcion;
+    $('obj_titulo').scrollIntoView({ behavior: 'smooth' });
+  };
+  window.delObj = function (id) {
+    if (!confirm('¿Eliminar el objetivo y todos sus Key Results?')) return;
+    google.script.run.withSuccessHandler(function () { toast('Objetivo eliminado'); refresh(); })
+      .withFailureHandler(function (e) { toast(e.message || e, true); }).deleteObjetivo(id);
+  };
+  window.editKr = function (id) {
+    var kr = STATE.keyResults.filter(function (x) { return x.id === id; })[0];
+    if (!kr) return;
+    $('kr_id').value = kr.id; $('kr_objetivoId').value = kr.objetivoId; $('kr_descripcion').value = kr.descripcion;
+    $('kr_dueno').value = kr.dueno; $('kr_unidad').value = kr.unidad; $('kr_baseline').value = kr.baseline;
+    $('kr_meta').value = kr.meta; $('kr_actual').value = kr.actual;
+    $('kr_descripcion').scrollIntoView({ behavior: 'smooth' });
+  };
+  window.delKr = function (id) {
+    if (!confirm('¿Eliminar este Key Result y sus check-ins?')) return;
+    google.script.run.withSuccessHandler(function () { toast('Key Result eliminado'); refresh(); })
+      .withFailureHandler(function (e) { toast(e.message || e, true); }).deleteKeyResult(id);
+  };
+
+  // ---------- Check-ins ----------
+  $('chkForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var data = {
+      krId: $('chk_krId').value,
+      valor: $('chk_valor').value,
+      confianza: $('chk_confianza').value,
+      autor: $('chk_autor').value,
+      fecha: $('chk_fecha').value,
+      comentario: $('chk_comentario').value
+    };
+    google.script.run
+      .withSuccessHandler(function () { toast('Check-in registrado'); $('chkForm').reset(); refresh(); })
+      .withFailureHandler(function (err) { toast(err.message || err, true); })
+      .addCheckin(data);
+  });
+
+  function krDesc(krId) {
+    var kr = STATE.keyResults.filter(function (k) { return k.id === krId; })[0];
+    return kr ? kr.descripcion : krId;
+  }
+  function renderCheckins() {
+    if (!STATE.checkins.length) { $('chkList').innerHTML = '<div class="empty">Sin check-ins aún.</div>'; return; }
+    var rows = STATE.checkins.map(function (c) {
+      return '<tr><td>' + esc(c.fecha) + '</td><td>' + esc(krDesc(c.krId)) + '</td><td>' + esc(c.valor) +
+        '</td><td>' + esc(c.progreso) + '%</td><td>' + esc(c.confianza) + '</td><td>' + esc(c.comentario || '') +
+        '</td><td><button class="ghost danger" onclick="delChk(\'' + c.id + '\')">✕</button></td></tr>';
+    }).join('');
+    $('chkList').innerHTML = '<table><thead><tr><th>Fecha</th><th>Key Result</th><th>Valor</th><th>Progreso</th><th>Confianza</th><th>Comentario</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+  window.delChk = function (id) {
+    if (!confirm('¿Eliminar este check-in?')) return;
+    google.script.run.withSuccessHandler(function () { toast('Check-in eliminado'); refresh(); })
+      .withFailureHandler(function (e) { toast(e.message || e, true); }).deleteCheckin(id);
+  };
+
+  // ---------- Reportes ----------
+  $('repForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var t = $('rep_trimestre').value;
+    if (!t) { toast('Elige un trimestre', true); return; }
+    $('repResult').innerHTML = '<div class="meta">Generando…</div>';
+    google.script.run
+      .withSuccessHandler(function (res) {
+        $('repResult').innerHTML = '<div class="obj"><div class="obj-title">' + esc(res.nombre) + '</div>' +
+          '<div class="meta">' + res.filas + ' filas generadas en la hoja del Spreadsheet.</div>' +
+          '<p><a class="primary" style="display:inline-block;text-decoration:none;margin-top:8px" target="_blank" href="' + esc(res.url) + '">Abrir hoja del reporte ↗</a></p></div>';
+        toast('Reporte generado');
+      })
+      .withFailureHandler(function (err) { $('repResult').innerHTML = ''; toast(err.message || err, true); })
+      .generarReporteTrimestre(t);
+  });
+
+  bootstrap();
+</script>
