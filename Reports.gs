@@ -105,7 +105,7 @@ function generarReporteTrimestre(trimestre) {
   if (sheet) ss.deleteSheet(sheet);
   sheet = ss.insertSheet(nombre);
 
-  const filas = [['Tipo', 'Objetivo / Key Result / Iniciativa', 'Dueño / Scrum Master', 'Progreso %', 'Estado', 'Meta', 'Actual']];
+  const filas = [['Tipo', 'Objetivo / Key Result / Iniciativa', 'Dueño / Agilista', 'Progreso %', 'Estado', 'Meta', 'Actual']];
   tree.forEach(function (n) {
     filas.push(['Objetivo', n.objetivo.titulo, n.objetivo.dueno, n.progreso, n.estado, '', '']);
     n.keyResults.forEach(function (kr) {

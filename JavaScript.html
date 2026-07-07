@@ -123,7 +123,7 @@
     $('tree').innerHTML = tree.map(function (n) {
       var krs = n.keyResults.map(function (kr) {
         var inis = (kr.iniciativas || []).map(function (i) {
-          var sm = i.scrumMasterNombre ? ' · SM: ' + esc(i.scrumMasterNombre) : '';
+          var sm = i.scrumMasterNombre ? ' · Agilista: ' + esc(i.scrumMasterNombre) : '';
           var sp = i.sprint ? ' · ' + esc(i.sprint) : '';
           return '<div class="ini-row"><span class="dot ' + i.estado + '"></span>' + esc(i.titulo) +
             '<span class="meta">' + sm + sp + '</span></div>';
@@ -179,7 +179,7 @@
         var sm = i.scrumMasterNombre ? esc(i.scrumMasterNombre) : 'Sin asignar';
         var html = '<div class="map-node"><div class="t">' + esc(i.titulo) + '</div>' +
           '<div class="s"><span class="dot ' + estado + '"></span>' +
-          esc(ESTADO_INI_LABEL[estado] || estado) + ' · SM: ' + sm + '</div></div>';
+          esc(ESTADO_INI_LABEL[estado] || estado) + ' · Agilista: ' + sm + '</div></div>';
         return { html: html, h: measureNodeH(html, MAP.INI_W) };
       });
       var iniBlockH = iniItems.reduce(function (s, it) { return s + it.h; }, 0) +
@@ -247,11 +247,23 @@
       '<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%">' + html + '</div></foreignObject>';
   }
 
+  function mapaHeader() {
+    var w = MAP.INI_X + MAP.INI_W + MAP.PAD;
+    function col(x, cw, txt) {
+      return '<span style="position:absolute;left:' + x + 'px;width:' + cw + 'px">' + txt + '</span>';
+    }
+    return '<div class="map-header" style="width:' + w + 'px">' +
+      col(MAP.OBJ_X, MAP.OBJ_W, 'Objetivo') +
+      col(MAP.KR_X, MAP.KR_W, 'Key Result') +
+      col(MAP.INI_X, MAP.INI_W, 'Iniciativas') +
+      '</div>';
+  }
+
   function renderMapa() {
     var filtro = $('mapaTrimestre').value;
     var tree = STATE.tree.filter(function (n) { return !filtro || n.objetivo.trimestre === filtro; });
     if (!tree.length) { $('mapaCanvas').innerHTML = '<div class="empty">Aún no hay objetivos. Ve a “Registrar OKRs”.</div>'; return; }
-    $('mapaCanvas').innerHTML = tree.map(mapaSvgObjetivo).join('');
+    $('mapaCanvas').innerHTML = mapaHeader() + tree.map(mapaSvgObjetivo).join('');
   }
   document.getElementById('mapaTrimestre').addEventListener('change', renderMapa);
 
@@ -339,13 +351,13 @@
     e.preventDefault();
     var data = { id: $('sm_id').value, nombre: $('sm_nombre').value, equipo: $('sm_equipo').value };
     google.script.run
-      .withSuccessHandler(function () { toast('Scrum Master guardado'); $('smForm').reset(); $('sm_id').value = ''; refresh(); })
+      .withSuccessHandler(function () { toast('Agilista guardado'); $('smForm').reset(); $('sm_id').value = ''; refresh(); })
       .withFailureHandler(function (err) { toast(err.message || err, true); })
       .saveScrumMaster(data);
   });
 
   function renderScrumMasters() {
-    if (!STATE.scrumMasters.length) { $('smList').innerHTML = '<div class="meta">Aún no hay Scrum Masters. Añade el primero arriba.</div>'; return; }
+    if (!STATE.scrumMasters.length) { $('smList').innerHTML = '<div class="meta">Aún no hay Agilistas. Añade el primero arriba.</div>'; return; }
     $('smList').innerHTML = STATE.scrumMasters.map(function (sm) {
       return '<span class="chip">' + esc(sm.nombre) + (sm.equipo ? ' · ' + esc(sm.equipo) : '') +
         ' <a onclick="editSm(\'' + sm.id + '\')">editar</a>' +
@@ -359,8 +371,8 @@
     $('sm_nombre').focus();
   };
   window.delSm = function (id) {
-    if (!confirm('¿Eliminar este Scrum Master? Sus iniciativas quedarán sin asignar.')) return;
-    google.script.run.withSuccessHandler(function () { toast('Scrum Master eliminado'); refresh(); })
+    if (!confirm('¿Eliminar este Agilista? Sus iniciativas quedarán sin asignar.')) return;
+    google.script.run.withSuccessHandler(function () { toast('Agilista eliminado'); refresh(); })
       .withFailureHandler(function (e) { toast(e.message || e, true); }).deleteScrumMaster(id);
   };
 
@@ -398,7 +410,7 @@
         '<td><div class="row-actions"><button class="ghost" onclick="editIni(\'' + i.id + '\')">Editar</button>' +
         '<button class="ghost danger" onclick="delIni(\'' + i.id + '\')">✕</button></div></td></tr>';
     }).join('');
-    $('iniList').innerHTML = '<table><thead><tr><th>Iniciativa</th><th>Key Result</th><th>Scrum Master</th><th>Estado</th><th>Sprint</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+    $('iniList').innerHTML = '<table><thead><tr><th>Iniciativa</th><th>Key Result</th><th>Agilista</th><th>Estado</th><th>Sprint</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
   window.editIni = function (id) {
     var i = STATE.iniciativas.filter(function (x) { return x.id === id; })[0];

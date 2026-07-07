@@ -15,7 +15,7 @@ function saveScrumMaster(data) {
     nombre: (data.nombre || '').trim(),
     equipo: (data.equipo || '').trim()
   };
-  if (!sm.nombre) throw new Error('El Scrum Master necesita un nombre.');
+  if (!sm.nombre) throw new Error('El Agilista necesita un nombre.');
   return upsert_(SHEETS.SCRUM_MASTERS, sm);
 }
 
