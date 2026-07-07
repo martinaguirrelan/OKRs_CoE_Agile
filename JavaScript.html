@@ -46,6 +46,7 @@
 
   function renderAll() {
     fillSelect($('dashTrimestre'), STATE.trimestres, 'Todos');
+    fillSelect($('mapaTrimestre'), STATE.trimestres, 'Todos');
     fillSelect($('rep_trimestre'), STATE.trimestres, null);
     fillObjetivoSelect();
     fillKrSelect();
@@ -53,6 +54,7 @@
     fillScrumMasterSelect();
     renderResumen();
     renderTree();
+    renderMapa();
     renderOkrList();
     renderScrumMasters();
     renderIniciativas();
@@ -139,6 +141,95 @@
     }).join('');
   }
   document.getElementById('dashTrimestre').addEventListener('change', renderTree);
+
+  // ---------- Mapa (árbol / grafo) ----------
+  var MAP = {
+    OBJ_X: 12, KR_X: 320, INI_X: 628,
+    OBJ_W: 260, KR_W: 268, INI_W: 240,
+    NODE_H: 54, INI_H: 44, GAP: 10, PAD: 12
+  };
+
+  // Genera el bloque SVG de un objetivo con sus KRs e iniciativas.
+  function mapaSvgObjetivo(n) {
+    var edges = [], nodes = [];
+    var y = MAP.PAD;
+    var krCenters = [];
+
+    n.keyResults.forEach(function (kr) {
+      var inis = kr.iniciativas || [];
+      var slots = Math.max(1, inis.length);
+      var blockH = slots * MAP.INI_H + (slots - 1) * MAP.GAP;
+      var krCenter = y + blockH / 2;
+      krCenters.push(krCenter);
+
+      // Iniciativas (columna derecha) + conectores KR -> iniciativa.
+      var iy = y;
+      inis.forEach(function (i) {
+        var estado = i.estado || 'pendiente';
+        var sm = i.scrumMasterNombre ? esc(i.scrumMasterNombre) : 'Sin asignar';
+        nodes.push(fo(MAP.INI_X, iy, MAP.INI_W, MAP.INI_H,
+          '<div class="map-node"><div class="t">' + esc(i.titulo) + '</div>' +
+          '<div class="s"><span class="dot ' + estado + '"></span>' + esc(ESTADO_INI_LABEL[estado] || estado) + ' · SM: ' + sm + '</div></div>'));
+        edges.push(edge(MAP.KR_X + MAP.KR_W, krCenter, MAP.INI_X, iy + MAP.INI_H / 2));
+        iy += MAP.INI_H + MAP.GAP;
+      });
+
+      // Nodo KR (columna central), centrado sobre su bloque de iniciativas.
+      var krTop = krCenter - MAP.NODE_H / 2;
+      nodes.push(fo(MAP.KR_X, krTop, MAP.KR_W, MAP.NODE_H,
+        '<div class="map-node ' + kr.estado + '"><div class="t">' + esc(kr.descripcion) + '</div>' +
+        '<div class="s"><span class="map-badge ' + kr.estado + '">' + kr.progreso + '%</span> · ' +
+        esc(kr.actual) + '/' + esc(kr.meta) + ' ' + esc(kr.unidad || '') + '</div></div>'));
+
+      y += blockH + MAP.GAP * 2;
+    });
+
+    var totalH = Math.max(y, MAP.NODE_H + MAP.PAD * 2);
+    // Nodo Objetivo (columna izquierda), centrado sobre todos sus KRs.
+    var objCenter = krCenters.length
+      ? (krCenters[0] + krCenters[krCenters.length - 1]) / 2
+      : totalH / 2;
+    var objTop = objCenter - MAP.NODE_H / 2;
+    nodes.push(fo(MAP.OBJ_X, objTop, MAP.OBJ_W, MAP.NODE_H,
+      '<div class="map-node obj"><div class="t">' + esc(n.objetivo.titulo) + '</div>' +
+      '<div class="s"><span class="map-badge ' + n.estado + '">' + n.progreso + '%</span> · ' +
+      esc(n.objetivo.trimestre) + (n.objetivo.dueno ? ' · ' + esc(n.objetivo.dueno) : '') + '</div></div>'));
+
+    // Conectores Objetivo -> cada KR.
+    krCenters.forEach(function (c) {
+      edges.unshift(edge(MAP.OBJ_X + MAP.OBJ_W, objCenter, MAP.KR_X, c));
+    });
+
+    if (!n.keyResults.length) {
+      nodes.push(fo(MAP.KR_X, MAP.PAD, MAP.KR_W, MAP.NODE_H,
+        '<div class="map-node"><div class="s">Sin Key Results asociados.</div></div>'));
+    }
+
+    var w = MAP.INI_X + MAP.INI_W + MAP.PAD;
+    return '<div class="map-obj"><svg width="' + w + '" height="' + (totalH + MAP.PAD) +
+      '" viewBox="0 0 ' + w + ' ' + (totalH + MAP.PAD) + '">' +
+      edges.join('') + nodes.join('') + '</svg></div>';
+  }
+
+  // Conector curvo (bezier) entre dos puntos.
+  function edge(x1, y1, x2, y2) {
+    var mx = (x1 + x2) / 2;
+    return '<path class="map-edge" d="M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + x2 + ',' + y2 + '"/>';
+  }
+
+  // foreignObject con HTML dentro del SVG (permite que el texto se ajuste).
+  function fo(x, y, w, h, html) {
+    return '<foreignObject x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '">' +
+      '<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%">' + html + '</div></foreignObject>';
+  }
+
+  function renderMapa() {
+    var filtro = $('mapaTrimestre').value;
+    var tree = STATE.tree.filter(function (n) { return !filtro || n.objetivo.trimestre === filtro; });
+    if (!tree.length) { $('mapaCanvas').innerHTML = '<div class="empty">Aún no hay objetivos. Ve a “Registrar OKRs”.</div>'; return; }
+    $('mapaCanvas').innerHTML = tree.map(mapaSvgObjetivo).join('');
+  }
+  document.getElementById('mapaTrimestre').addEventListener('change', renderMapa);
 
   // ---------- Registrar OKRs ----------
   $('objForm').addEventListener('submit', function (e) {

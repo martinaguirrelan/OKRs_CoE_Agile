@@ -105,4 +105,32 @@
   .dot.en-progreso { background: var(--brand); }
   .dot.bloqueada { background: var(--red); }
   .dot.hecha { background: var(--green); }
+
+  /* Mapa / árbol */
+  .map-legend { display: flex; gap: 12px; align-items: center; font-size: 12px; color: var(--muted); }
+  .map-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .map-legend i.lg { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .map-legend i.lg.on-track { background: var(--green); }
+  .map-legend i.lg.at-risk { background: var(--amber); }
+  .map-legend i.lg.off-track { background: var(--red); }
+
+  #mapaCanvas { overflow-x: auto; }
+  .map-obj { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; margin-bottom: 16px; }
+  .map-obj svg { display: block; }
+  .map-node {
+    box-sizing: border-box; height: 100%; border-radius: 10px; padding: 8px 10px;
+    background: #fff; border: 1.5px solid var(--line); overflow: hidden;
+    font-family: inherit; display: flex; flex-direction: column; justify-content: center;
+  }
+  .map-node .t { font-weight: 600; font-size: 12.5px; line-height: 1.2; }
+  .map-node .s { font-size: 11px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 5px; }
+  .map-node.obj { border-color: var(--brand); border-width: 2px; background: #f5f3ff; }
+  .map-node.on-track { border-color: var(--green); }
+  .map-node.at-risk { border-color: var(--amber); }
+  .map-node.off-track { border-color: var(--red); }
+  .map-edge { fill: none; stroke: #cbd5e1; stroke-width: 1.5; }
+  .map-badge { font-weight: 700; }
+  .map-badge.on-track { color: var(--green); }
+  .map-badge.at-risk { color: var(--amber); }
+  .map-badge.off-track { color: var(--red); }
 </style>

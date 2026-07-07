@@ -12,6 +12,7 @@
 
   <nav class="tabs">
     <button class="tab active" data-view="dashboard">Dashboard</button>
+    <button class="tab" data-view="mapa">Mapa</button>
     <button class="tab" data-view="okrs">Registrar OKRs</button>
     <button class="tab" data-view="iniciativas">Iniciativas</button>
     <button class="tab" data-view="checkins">Check-ins</button>
@@ -29,6 +30,23 @@
       </div>
       <div class="cards" id="resumen"></div>
       <div id="tree"></div>
+    </section>
+
+    <!-- MAPA (árbol / grafo) -->
+    <section id="mapa" class="view">
+      <div class="inline" style="margin-bottom:12px">
+        <div>
+          <label>Filtrar por trimestre</label>
+          <select id="mapaTrimestre"><option value="">Todos</option></select>
+        </div>
+        <div class="map-legend">
+          <span><i class="lg on-track"></i>On track</span>
+          <span><i class="lg at-risk"></i>En riesgo</span>
+          <span><i class="lg off-track"></i>Fuera de ruta</span>
+          <span style="margin-left:8px"><i class="dot hecha"></i>Iniciativa</span>
+        </div>
+      </div>
+      <div id="mapaCanvas"></div>
     </section>
 
     <!-- REGISTRAR OKRs -->
