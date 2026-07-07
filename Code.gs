@@ -11,6 +11,7 @@ function onOpen() {
     .addItem('Abrir panel (sidebar)', 'abrirSidebar')
     .addSeparator()
     .addItem('Asignar "CoE Ágil" a objetivos sin gerencia', 'menuAsignarCoE')
+    .addItem('Cargar OKRs de ejemplo (CoE Ágil)', 'menuSembrarOKRs')
     .addToUi();
 }
 
@@ -20,6 +21,26 @@ function menuAsignarCoE() {
   SpreadsheetApp.getUi().alert(
     'Gerencia "' + res.gerencia.nombre + '" asignada a ' + res.asignados +
     ' objetivo(s) que estaban sin gerencia.');
+}
+
+/** Acción de menú: carga los OKRs de ejemplo (con confirmación). */
+function menuSembrarOKRs() {
+  const ui = SpreadsheetApp.getUi();
+  const resp = ui.alert(
+    'Cargar OKRs de ejemplo',
+    'Se crearán los objetivos, Key Results e iniciativas de ejemplo en la gerencia ' +
+    '"CoE Ágil" (' + trimestreActual_() + '). Los objetivos que ya existan por título se omiten.\n\n¿Continuar?',
+    ui.ButtonSet.OK_CANCEL);
+  if (resp !== ui.Button.OK) return;
+
+  const r = sembrarOKRsEjemplo();
+  ui.alert('Carga completada',
+    'Objetivos creados: ' + r.objetivos +
+    '\nKey Results: ' + r.keyResults +
+    '\nIniciativas: ' + r.iniciativas +
+    '\nOmitidos (ya existían): ' + r.omitidos +
+    '\nGerencia: ' + r.gerencia + ' · Trimestre: ' + r.trimestre,
+    ui.ButtonSet.OK);
 }
 
 /** Abre la interfaz dentro del propio Spreadsheet como sidebar. */
