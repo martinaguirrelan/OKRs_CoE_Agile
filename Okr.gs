@@ -81,7 +81,8 @@ function saveKeyResult(data) {
     meta: meta,
     actual: actual,
     progreso: progreso,
-    estado: estadoPorProgreso_(progreso)
+    estado: estadoPorProgreso_(progreso),
+    medicion: (data.medicion || '').trim()
   };
   return upsert_(SHEETS.KEY_RESULTS, kr);
 }

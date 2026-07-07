@@ -197,10 +197,11 @@
             '<span class="meta">' + sm + sp + '</span></div>';
         }).join('');
         var inisWrap = inis ? '<div class="inis">' + inis + '</div>' : '';
+        var med = kr.medicion ? '<div class="kr-medicion">ƒ ' + esc(kr.medicion) + '</div>' : '';
         return '<div class="kr"><div class="kr-row"><div>' + esc(kr.descripcion) +
           ' <span class="meta">' + esc(kr.actual) + '/' + esc(kr.meta) + ' ' + esc(kr.unidad || '') + '</span></div>' +
           '<span class="pill ' + kr.estado + '">' + kr.progreso + '%</span></div>' +
-          bar(kr.progreso, kr.estado) + inisWrap + '</div>';
+          bar(kr.progreso, kr.estado) + med + inisWrap + '</div>';
       }).join('') || '<div class="meta" style="padding:8px 0">Sin Key Results.</div>';
       var ger = gerNombre(n.objetivo.gerenciaId);
       return '<div class="obj"><div class="obj-head"><div><div class="obj-title">' + esc(n.objetivo.titulo) +
@@ -401,7 +402,8 @@
       unidad: $('kr_unidad').value,
       baseline: $('kr_baseline').value,
       meta: $('kr_meta').value,
-      actual: $('kr_actual').value
+      actual: $('kr_actual').value,
+      medicion: $('kr_medicion').value
     };
     google.script.run
       .withSuccessHandler(function () { toast('Key Result guardado'); $('krForm').reset(); $('kr_id').value = ''; refresh(); })
@@ -416,9 +418,10 @@
     $('okrList').innerHTML = S.objetivos.map(function (o) {
       var krs = S.keyResults.filter(function (k) { return k.objetivoId === o.id; });
       var krHtml = krs.map(function (kr) {
+        var med = kr.medicion ? '<div class="kr-medicion">ƒ ' + esc(kr.medicion) + '</div>' : '';
         return '<div class="kr"><div class="kr-row"><div>' + esc(kr.descripcion) + ' <span class="pill ' + kr.estado + '">' + kr.progreso + '%</span></div>' +
           '<div class="row-actions"><button class="ghost" onclick="editKr(\'' + kr.id + '\')">Editar</button>' +
-          '<button class="ghost danger" onclick="delKr(\'' + kr.id + '\')">Eliminar</button></div></div></div>';
+          '<button class="ghost danger" onclick="delKr(\'' + kr.id + '\')">Eliminar</button></div></div>' + med + '</div>';
       }).join('') || '<div class="meta" style="padding:6px 0">Sin KRs.</div>';
       return '<div class="obj"><div class="obj-head"><div class="obj-title">' + esc(o.titulo) + '</div>' +
         '<div class="row-actions"><button class="ghost" onclick="editObj(\'' + o.id + '\')">Editar</button>' +
@@ -446,7 +449,7 @@
     if (!kr) return;
     $('kr_id').value = kr.id; $('kr_objetivoId').value = kr.objetivoId; $('kr_descripcion').value = kr.descripcion;
     $('kr_dueno').value = kr.dueno; $('kr_unidad').value = kr.unidad; $('kr_baseline').value = kr.baseline;
-    $('kr_meta').value = kr.meta; $('kr_actual').value = kr.actual;
+    $('kr_meta').value = kr.meta; $('kr_actual').value = kr.actual; $('kr_medicion').value = kr.medicion || '';
     $('kr_descripcion').scrollIntoView({ behavior: 'smooth' });
   };
   window.delKr = function (id) {

@@ -112,17 +112,17 @@ function generarReporteTrimestre(trimestre, gerenciaId) {
   if (sheet) ss.deleteSheet(sheet);
   sheet = ss.insertSheet(nombre);
 
-  const filas = [['Tipo', 'Objetivo / Key Result / Iniciativa', 'Dueño / Agilista', 'Progreso %', 'Estado', 'Meta', 'Actual']];
+  const filas = [['Tipo', 'Objetivo / Key Result / Iniciativa', 'Dueño / Agilista', 'Progreso %', 'Estado', 'Meta', 'Actual', 'Medición / Fórmula']];
   tree.forEach(function (n) {
-    filas.push(['Objetivo', n.objetivo.titulo, n.objetivo.dueno, n.progreso, n.estado, '', '']);
+    filas.push(['Objetivo', n.objetivo.titulo, n.objetivo.dueno, n.progreso, n.estado, '', '', '']);
     n.keyResults.forEach(function (kr) {
-      filas.push(['  KR', kr.descripcion, kr.dueno, kr.progreso, kr.estado, kr.meta, kr.actual]);
+      filas.push(['  KR', kr.descripcion, kr.dueno, kr.progreso, kr.estado, kr.meta, kr.actual, kr.medicion || '']);
       (kr.iniciativas || []).forEach(function (i) {
-        filas.push(['    Iniciativa', i.titulo, i.scrumMasterNombre || '', '', i.estado, i.sprint || '', '']);
+        filas.push(['    Iniciativa', i.titulo, i.scrumMasterNombre || '', '', i.estado, i.sprint || '', '', '']);
       });
     });
   });
-  if (filas.length === 1) filas.push(['—', 'Sin objetivos en este trimestre', '', '', '', '', '']);
+  if (filas.length === 1) filas.push(['—', 'Sin objetivos en este trimestre', '', '', '', '', '', '']);
 
   sheet.getRange(1, 1, filas.length, filas[0].length).setValues(filas);
   sheet.getRange(1, 1, 1, filas[0].length).setFontWeight('bold');

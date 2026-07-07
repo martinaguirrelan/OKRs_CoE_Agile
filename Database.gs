@@ -12,7 +12,8 @@ const SHEETS = {
   },
   KEY_RESULTS: {
     name: 'KeyResults',
-    headers: ['id', 'objetivoId', 'descripcion', 'dueno', 'unidad', 'baseline', 'meta', 'actual', 'progreso', 'estado']
+    // medicion se añade al final para no desplazar datos existentes.
+    headers: ['id', 'objetivoId', 'descripcion', 'dueno', 'unidad', 'baseline', 'meta', 'actual', 'progreso', 'estado', 'medicion']
   },
   CHECKINS: {
     name: 'Checkins',
