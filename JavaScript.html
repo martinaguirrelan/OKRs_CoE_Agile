@@ -145,11 +145,26 @@
   // ---------- Mapa (árbol / grafo) ----------
   var MAP = {
     OBJ_X: 12, KR_X: 320, INI_X: 628,
-    OBJ_W: 260, KR_W: 268, INI_W: 240,
-    NODE_H: 54, INI_H: 44, GAP: 10, PAD: 12
+    OBJ_W: 260, KR_W: 268, INI_W: 250,
+    MIN_H: 44, GAP: 12, PAD: 14
   };
 
-  // Genera el bloque SVG de un objetivo con sus KRs e iniciativas.
+  // Contenedor oculto para medir la altura real de cada nodo según su contenido.
+  var mapMeasure = null;
+  function measureNodeH(html, width) {
+    if (!mapMeasure) {
+      mapMeasure = document.createElement('div');
+      mapMeasure.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;';
+      document.body.appendChild(mapMeasure);
+    }
+    mapMeasure.style.width = width + 'px';
+    mapMeasure.innerHTML = html;
+    var el = mapMeasure.firstElementChild;
+    var h = el ? el.offsetHeight : MAP.MIN_H;
+    return Math.max(h, MAP.MIN_H);
+  }
+
+  // Genera el bloque SVG de un objetivo con sus KRs e iniciativas (alturas auto).
   function mapaSvgObjetivo(n) {
     var edges = [], nodes = [];
     var y = MAP.PAD;
@@ -157,57 +172,66 @@
 
     n.keyResults.forEach(function (kr) {
       var inis = kr.iniciativas || [];
-      var slots = Math.max(1, inis.length);
-      var blockH = slots * MAP.INI_H + (slots - 1) * MAP.GAP;
+
+      // 1) Medir cada iniciativa y el KR según su contenido.
+      var iniItems = inis.map(function (i) {
+        var estado = i.estado || 'pendiente';
+        var sm = i.scrumMasterNombre ? esc(i.scrumMasterNombre) : 'Sin asignar';
+        var html = '<div class="map-node"><div class="t">' + esc(i.titulo) + '</div>' +
+          '<div class="s"><span class="dot ' + estado + '"></span>' +
+          esc(ESTADO_INI_LABEL[estado] || estado) + ' · SM: ' + sm + '</div></div>';
+        return { html: html, h: measureNodeH(html, MAP.INI_W) };
+      });
+      var iniBlockH = iniItems.reduce(function (s, it) { return s + it.h; }, 0) +
+        Math.max(0, iniItems.length - 1) * MAP.GAP;
+
+      var krHtml = '<div class="map-node ' + kr.estado + '"><div class="t">' + esc(kr.descripcion) + '</div>' +
+        '<div class="s"><span class="map-badge ' + kr.estado + '">' + kr.progreso + '%</span> · ' +
+        esc(kr.actual) + '/' + esc(kr.meta) + ' ' + esc(kr.unidad || '') + '</div></div>';
+      var krH = measureNodeH(krHtml, MAP.KR_W);
+
+      var blockH = Math.max(iniBlockH, krH);
       var krCenter = y + blockH / 2;
       krCenters.push(krCenter);
 
-      // Iniciativas (columna derecha) + conectores KR -> iniciativa.
-      var iy = y;
-      inis.forEach(function (i) {
-        var estado = i.estado || 'pendiente';
-        var sm = i.scrumMasterNombre ? esc(i.scrumMasterNombre) : 'Sin asignar';
-        nodes.push(fo(MAP.INI_X, iy, MAP.INI_W, MAP.INI_H,
-          '<div class="map-node"><div class="t">' + esc(i.titulo) + '</div>' +
-          '<div class="s"><span class="dot ' + estado + '"></span>' + esc(ESTADO_INI_LABEL[estado] || estado) + ' · SM: ' + sm + '</div></div>'));
-        edges.push(edge(MAP.KR_X + MAP.KR_W, krCenter, MAP.INI_X, iy + MAP.INI_H / 2));
-        iy += MAP.INI_H + MAP.GAP;
+      // 2) Colocar iniciativas centradas dentro del bloque + conectores.
+      var iy = y + (blockH - iniBlockH) / 2;
+      iniItems.forEach(function (it) {
+        nodes.push(fo(MAP.INI_X, iy, MAP.INI_W, it.h, it.html));
+        edges.push(edge(MAP.KR_X + MAP.KR_W, krCenter, MAP.INI_X, iy + it.h / 2));
+        iy += it.h + MAP.GAP;
       });
 
-      // Nodo KR (columna central), centrado sobre su bloque de iniciativas.
-      var krTop = krCenter - MAP.NODE_H / 2;
-      nodes.push(fo(MAP.KR_X, krTop, MAP.KR_W, MAP.NODE_H,
-        '<div class="map-node ' + kr.estado + '"><div class="t">' + esc(kr.descripcion) + '</div>' +
-        '<div class="s"><span class="map-badge ' + kr.estado + '">' + kr.progreso + '%</span> · ' +
-        esc(kr.actual) + '/' + esc(kr.meta) + ' ' + esc(kr.unidad || '') + '</div></div>'));
+      // 3) Nodo KR centrado sobre su bloque.
+      nodes.push(fo(MAP.KR_X, krCenter - krH / 2, MAP.KR_W, krH, krHtml));
 
-      y += blockH + MAP.GAP * 2;
+      y += blockH + MAP.GAP * 1.5;
     });
 
-    var totalH = Math.max(y, MAP.NODE_H + MAP.PAD * 2);
-    // Nodo Objetivo (columna izquierda), centrado sobre todos sus KRs.
+    // Nodo Objetivo, centrado sobre todos sus KRs.
+    var objHtml = '<div class="map-node obj"><div class="t">' + esc(n.objetivo.titulo) + '</div>' +
+      '<div class="s"><span class="map-badge ' + n.estado + '">' + n.progreso + '%</span> · ' +
+      esc(n.objetivo.trimestre) + (n.objetivo.dueno ? ' · ' + esc(n.objetivo.dueno) : '') + '</div></div>';
+    var objH = measureNodeH(objHtml, MAP.OBJ_W);
     var objCenter = krCenters.length
       ? (krCenters[0] + krCenters[krCenters.length - 1]) / 2
-      : totalH / 2;
-    var objTop = objCenter - MAP.NODE_H / 2;
-    nodes.push(fo(MAP.OBJ_X, objTop, MAP.OBJ_W, MAP.NODE_H,
-      '<div class="map-node obj"><div class="t">' + esc(n.objetivo.titulo) + '</div>' +
-      '<div class="s"><span class="map-badge ' + n.estado + '">' + n.progreso + '%</span> · ' +
-      esc(n.objetivo.trimestre) + (n.objetivo.dueno ? ' · ' + esc(n.objetivo.dueno) : '') + '</div></div>'));
+      : MAP.PAD + objH / 2;
+    objCenter = Math.max(objCenter, MAP.PAD + objH / 2); // evita que se salga por arriba
+    nodes.push(fo(MAP.OBJ_X, objCenter - objH / 2, MAP.OBJ_W, objH, objHtml));
 
-    // Conectores Objetivo -> cada KR.
     krCenters.forEach(function (c) {
       edges.unshift(edge(MAP.OBJ_X + MAP.OBJ_W, objCenter, MAP.KR_X, c));
     });
 
     if (!n.keyResults.length) {
-      nodes.push(fo(MAP.KR_X, MAP.PAD, MAP.KR_W, MAP.NODE_H,
+      nodes.push(fo(MAP.KR_X, MAP.PAD, MAP.KR_W, MAP.MIN_H,
         '<div class="map-node"><div class="s">Sin Key Results asociados.</div></div>'));
     }
 
+    var totalH = Math.max(y, objCenter + objH / 2 + MAP.PAD, MAP.MIN_H + 2 * MAP.PAD);
     var w = MAP.INI_X + MAP.INI_W + MAP.PAD;
-    return '<div class="map-obj"><svg width="' + w + '" height="' + (totalH + MAP.PAD) +
-      '" viewBox="0 0 ' + w + ' ' + (totalH + MAP.PAD) + '">' +
+    return '<div class="map-obj"><svg width="' + w + '" height="' + totalH +
+      '" viewBox="0 0 ' + w + ' ' + totalH + '">' +
       edges.join('') + nodes.join('') + '</svg></div>';
   }
 
