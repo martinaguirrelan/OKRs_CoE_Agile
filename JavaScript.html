@@ -156,6 +156,15 @@
     objSel.value = currentObj || gerenciaActiva() || '';
   }
 
+  // Rellena un <select> con una lista de valores (opción "Todos" opcional),
+  // preservando la selección actual si sigue disponible.
+  function fillSelect(sel, values, allLabel) {
+    var current = sel.value;
+    sel.innerHTML = (allLabel != null ? '<option value="">' + esc(allLabel) + '</option>' : '') +
+      values.map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('');
+    if (current) sel.value = current;
+  }
+
   function fillObjetivoSelect() {
     var objetivos = scoped().objetivos;
     $('kr_objetivoId').innerHTML = objetivos.map(function (o) {
