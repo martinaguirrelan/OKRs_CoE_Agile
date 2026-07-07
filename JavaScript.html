@@ -44,8 +44,38 @@
 
   function refresh() { bootstrap(); }
 
+  // Trimestre actual en formato AAAA-Qn (según el navegador del usuario).
+  function trimestreActualCliente() {
+    var d = new Date();
+    return d.getFullYear() + '-Q' + (Math.floor(d.getMonth() / 3) + 1);
+  }
+
+  // Trimestres sugeridos: 2 atrás y 5 adelante del actual + los ya existentes.
+  function trimestresSugeridos() {
+    var d = new Date();
+    var base = d.getFullYear() * 4 + Math.floor(d.getMonth() / 3); // índice lineal de trimestre
+    var set = {};
+    for (var i = -2; i <= 5; i++) {
+      var idx = base + i;
+      set[Math.floor(idx / 4) + '-Q' + ((idx % 4) + 1)] = true;
+    }
+    (STATE.trimestres || []).forEach(function (t) { if (t) set[t] = true; });
+    return Object.keys(set).sort();
+  }
+
+  function fillObjTrimestreSelect() {
+    var sel = $('obj_trimestre');
+    var current = sel.value;
+    var opts = trimestresSugeridos();
+    sel.innerHTML = opts.map(function (t) {
+      return '<option value="' + esc(t) + '">' + esc(t) + '</option>';
+    }).join('');
+    sel.value = (current && opts.indexOf(current) !== -1) ? current : trimestreActualCliente();
+  }
+
   function renderAll() {
     fillGerenciaSelects();
+    fillObjTrimestreSelect();
     fillSelect($('dashTrimestre'), STATE.trimestres, 'Todos');
     fillSelect($('mapaTrimestre'), STATE.trimestres, 'Todos');
     fillSelect($('rep_trimestre'), STATE.trimestres, null);
@@ -389,11 +419,11 @@
       gerenciaId: $('obj_gerenciaId').value
     };
     google.script.run
-      .withSuccessHandler(function () { toast('Objetivo guardado'); $('objForm').reset(); $('obj_id').value = ''; $('obj_gerenciaId').value = gerenciaActiva() || ''; refresh(); })
+      .withSuccessHandler(function () { toast('Objetivo guardado'); $('objForm').reset(); $('obj_id').value = ''; $('obj_gerenciaId').value = gerenciaActiva() || ''; $('obj_trimestre').value = trimestreActualCliente(); refresh(); })
       .withFailureHandler(function (err) { toast(err.message || err, true); })
       .saveObjetivo(data);
   });
-  $('objReset').addEventListener('click', function () { $('objForm').reset(); $('obj_id').value = ''; $('obj_gerenciaId').value = gerenciaActiva() || ''; });
+  $('objReset').addEventListener('click', function () { $('objForm').reset(); $('obj_id').value = ''; $('obj_gerenciaId').value = gerenciaActiva() || ''; $('obj_trimestre').value = trimestreActualCliente(); });
 
   $('krForm').addEventListener('submit', function (e) {
     e.preventDefault();
