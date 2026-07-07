@@ -44,6 +44,14 @@
 
   function refresh() { bootstrap(); }
 
+  // Trimestres derivados de los objetivos cargados (fuente de verdad para los
+  // filtros, así siempre coinciden con lo que se muestra en pantalla).
+  function trimestresDeObjetivos() {
+    var set = {};
+    (STATE.objetivos || []).forEach(function (o) { if (o.trimestre) set[o.trimestre] = true; });
+    return Object.keys(set).sort();
+  }
+
   // Trimestre actual en formato AAAA-Qn (según el navegador del usuario).
   function trimestreActualCliente() {
     var d = new Date();
@@ -59,7 +67,7 @@
       var idx = base + i;
       set[Math.floor(idx / 4) + '-Q' + ((idx % 4) + 1)] = true;
     }
-    (STATE.trimestres || []).forEach(function (t) { if (t) set[t] = true; });
+    trimestresDeObjetivos().forEach(function (t) { set[t] = true; });
     return Object.keys(set).sort();
   }
 
@@ -74,12 +82,13 @@
   }
 
   function renderAll() {
+    var tri = trimestresDeObjetivos();
     fillGerenciaSelects();
     fillObjTrimestreSelect();
-    fillSelect($('dashTrimestre'), STATE.trimestres, 'Todos');
-    fillSelect($('mapaTrimestre'), STATE.trimestres, 'Todos');
-    fillSelect($('rep_trimestre'), STATE.trimestres, null);
-    if (!STATE.trimestres.length) {
+    fillSelect($('dashTrimestre'), tri, 'Todos');
+    fillSelect($('mapaTrimestre'), tri, 'Todos');
+    fillSelect($('rep_trimestre'), tri, null);
+    if (!tri.length) {
       $('rep_trimestre').innerHTML = '<option value="">— Crea un objetivo para ver trimestres —</option>';
     }
     fillScrumMasterSelect();
