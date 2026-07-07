@@ -49,6 +49,9 @@
     fillSelect($('dashTrimestre'), STATE.trimestres, 'Todos');
     fillSelect($('mapaTrimestre'), STATE.trimestres, 'Todos');
     fillSelect($('rep_trimestre'), STATE.trimestres, null);
+    if (!STATE.trimestres.length) {
+      $('rep_trimestre').innerHTML = '<option value="">— Crea un objetivo para ver trimestres —</option>';
+    }
     fillScrumMasterSelect();
     renderGerencias();
     renderScrumMasters();
