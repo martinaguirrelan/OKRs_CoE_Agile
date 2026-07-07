@@ -7,7 +7,8 @@
 const SHEETS = {
   OBJETIVOS: {
     name: 'Objetivos',
-    headers: ['id', 'titulo', 'dueno', 'trimestre', 'estado', 'descripcion', 'creadoEn']
+    // gerenciaId se añade al final para no desplazar datos existentes.
+    headers: ['id', 'titulo', 'dueno', 'trimestre', 'estado', 'descripcion', 'creadoEn', 'gerenciaId']
   },
   KEY_RESULTS: {
     name: 'KeyResults',
@@ -24,6 +25,10 @@ const SHEETS = {
   SCRUM_MASTERS: {
     name: 'Agilistas',
     headers: ['id', 'nombre', 'equipo']
+  },
+  GERENCIAS: {
+    name: 'Gerencias',
+    headers: ['id', 'nombre']
   }
 };
 

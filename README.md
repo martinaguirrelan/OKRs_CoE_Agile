@@ -4,7 +4,8 @@ Aplicación en **Google Apps Script** para gestionar los OKRs de un Centro de Ex
 
 ## Funcionalidades
 
-- **Registrar OKRs** — Alta y edición de Objetivos y Key Results (dueño, trimestre, baseline, meta, valor actual).
+- **Multi-gerencia** — Cada Objetivo pertenece a una **Gerencia**. Un catálogo de gerencias administrable y un selector global en la cabecera permiten **filtrar toda la app** (dashboard, mapa, iniciativas, check-ins y reportes) para ver solo la información de una gerencia. Facilita escalar la herramienta a varias áreas.
+- **Registrar OKRs** — Alta y edición de Objetivos y Key Results (gerencia, dueño, trimestre, baseline, meta, valor actual).
 - **Iniciativas** — Iniciativas ágiles (épicas/proyectos) que contribuyen a cada KR, con estado (pendiente / en progreso / bloqueada / hecha), sprint y **Agilista** asignado. Incluye un catálogo de Agilistas administrable desde la propia interfaz.
 - **Dashboard** — Árbol de objetivos con progreso por KR y objetivo, iniciativas anidadas bajo cada KR, semáforo de estado (on-track / en riesgo / fuera de ruta) y tarjetas de resumen. Filtro por trimestre.
 - **Check-ins** — Actualizaciones periódicas de avance; cada check-in recalcula el progreso del KR y guarda historial con nivel de confianza y comentario.
@@ -14,7 +15,8 @@ Aplicación en **Google Apps Script** para gestionar los OKRs de un Centro de Ex
 
 | Hoja | Campos |
 |------|--------|
-| `Objetivos` | id, titulo, dueno, trimestre, estado, descripcion, creadoEn |
+| `Objetivos` | id, titulo, dueno, trimestre, estado, descripcion, creadoEn, gerenciaId |
+| `Gerencias` | id, nombre |
 | `KeyResults` | id, objetivoId, descripcion, dueno, unidad, baseline, meta, actual, progreso, estado |
 | `Checkins` | id, krId, fecha, valor, progreso, confianza, comentario, autor |
 | `Iniciativas` | id, krId, titulo, scrumMasterId, estado, sprint, descripcion, creadoEn |
@@ -29,6 +31,7 @@ appsscript.json     Manifiesto (scopes, runtime V8, web app)
 Code.gs             doGet, menú onOpen, include()
 Database.gs         Capa de acceso a Sheets (CRUD genérico + esquema)
 Okr.gs              Lógica de Objetivos y Key Results
+Gerencias.gs        Catálogo de Gerencias (multi-área)
 Iniciativas.gs      Iniciativas ágiles ligadas a cada KR
 ScrumMasters.gs     Catálogo de Agilistas
 Checkins.gs         Registro de check-ins y recálculo de progreso

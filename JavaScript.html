@@ -1,6 +1,6 @@
 <script>
   // Estado en memoria del cliente.
-  var STATE = { objetivos: [], keyResults: [], checkins: [], iniciativas: [], scrumMasters: [], tree: [], trimestres: [], resumen: {} };
+  var STATE = { objetivos: [], keyResults: [], checkins: [], iniciativas: [], scrumMasters: [], gerencias: [], tree: [], trimestres: [], resumen: {} };
 
   var ESTADO_INI_LABEL = { 'pendiente': 'Pendiente', 'en-progreso': 'En progreso', 'bloqueada': 'Bloqueada', 'hecha': 'Hecha' };
 
@@ -45,37 +45,84 @@
   function refresh() { bootstrap(); }
 
   function renderAll() {
+    fillGerenciaSelects();
     fillSelect($('dashTrimestre'), STATE.trimestres, 'Todos');
     fillSelect($('mapaTrimestre'), STATE.trimestres, 'Todos');
     fillSelect($('rep_trimestre'), STATE.trimestres, null);
+    fillScrumMasterSelect();
+    renderGerencias();
+    renderScrumMasters();
+    renderViews();
+  }
+
+  // Re-render de todas las vistas dependientes de la gerencia activa.
+  function renderViews() {
     fillObjetivoSelect();
     fillKrSelect();
     fillIniKrSelect();
-    fillScrumMasterSelect();
     renderResumen();
     renderTree();
     renderMapa();
     renderOkrList();
-    renderScrumMasters();
     renderIniciativas();
     renderCheckins();
   }
 
-  function fillSelect(sel, values, allLabel) {
+  // ---------- Gerencia activa (filtro global) ----------
+  function gerenciaActiva() { return $('gerenciaActiva').value; }
+
+  function gerNombre(id) {
+    var g = STATE.gerencias.filter(function (x) { return String(x.id) === String(id); })[0];
+    return g ? g.nombre : '';
+  }
+
+  // Devuelve los datos filtrados por la gerencia activa ('' = todas).
+  function scoped() {
+    var g = gerenciaActiva();
+    if (!g) {
+      return { objetivos: STATE.objetivos, keyResults: STATE.keyResults,
+        iniciativas: STATE.iniciativas, checkins: STATE.checkins, tree: STATE.tree };
+    }
+    var objetivos = STATE.objetivos.filter(function (o) { return String(o.gerenciaId) === g; });
+    var objIds = {}; objetivos.forEach(function (o) { objIds[o.id] = true; });
+    var keyResults = STATE.keyResults.filter(function (k) { return objIds[k.objetivoId]; });
+    var krIds = {}; keyResults.forEach(function (k) { krIds[k.id] = true; });
+    return {
+      objetivos: objetivos,
+      keyResults: keyResults,
+      iniciativas: STATE.iniciativas.filter(function (i) { return krIds[i.krId]; }),
+      checkins: STATE.checkins.filter(function (c) { return krIds[c.krId]; }),
+      tree: STATE.tree.filter(function (n) { return String(n.objetivo.gerenciaId) === g; })
+    };
+  }
+
+  function fillGerenciaSelects() {
+    // Selector global (cabecera): Todas + gerencias.
+    var sel = $('gerenciaActiva');
     var current = sel.value;
-    sel.innerHTML = (allLabel != null ? '<option value="">' + esc(allLabel) + '</option>' : '') +
-      values.map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('');
+    sel.innerHTML = '<option value="">Todas</option>' + STATE.gerencias.map(function (g) {
+      return '<option value="' + esc(g.id) + '">' + esc(g.nombre) + '</option>';
+    }).join('');
     if (current) sel.value = current;
+
+    // Selector del formulario de objetivo: sin gerencia + gerencias.
+    var objSel = $('obj_gerenciaId');
+    var currentObj = objSel.value;
+    objSel.innerHTML = '<option value="">— Sin gerencia —</option>' + STATE.gerencias.map(function (g) {
+      return '<option value="' + esc(g.id) + '">' + esc(g.nombre) + '</option>';
+    }).join('');
+    objSel.value = currentObj || gerenciaActiva() || '';
   }
 
   function fillObjetivoSelect() {
-    $('kr_objetivoId').innerHTML = STATE.objetivos.map(function (o) {
+    var objetivos = scoped().objetivos;
+    $('kr_objetivoId').innerHTML = objetivos.map(function (o) {
       return '<option value="' + esc(o.id) + '">' + esc(o.titulo) + ' (' + esc(o.trimestre) + ')</option>';
     }).join('') || '<option value="">— Crea un objetivo primero —</option>';
   }
 
   function krOptions() {
-    return STATE.keyResults.map(function (kr) {
+    return scoped().keyResults.map(function (kr) {
       return '<option value="' + esc(kr.id) + '">' + esc(kr.descripcion) + '</option>';
     }).join('') || '<option value="">— Crea un Key Result primero —</option>';
   }
@@ -96,8 +143,29 @@
   }
 
   // ---------- Dashboard ----------
+  // Calcula el resumen a partir del árbol ya filtrado por gerencia.
+  function computeResumen(tree) {
+    var r = { objetivos: tree.length, keyResults: 0, iniciativas: 0, iniciativasHechas: 0,
+      onTrack: 0, atRisk: 0, offTrack: 0, sumProg: 0 };
+    tree.forEach(function (n) {
+      n.keyResults.forEach(function (kr) {
+        r.keyResults++;
+        r.sumProg += Number(kr.progreso) || 0;
+        if (kr.estado === 'on-track') r.onTrack++;
+        else if (kr.estado === 'at-risk') r.atRisk++;
+        else r.offTrack++;
+        (kr.iniciativas || []).forEach(function (i) {
+          r.iniciativas++;
+          if (i.estado === 'hecha') r.iniciativasHechas++;
+        });
+      });
+    });
+    r.progresoPromedio = r.keyResults ? Math.round(r.sumProg / r.keyResults) : 0;
+    return r;
+  }
+
   function renderResumen() {
-    var r = STATE.resumen || {};
+    var r = computeResumen(scoped().tree);
     var cards = [
       ['Objetivos', r.objetivos || 0],
       ['Key Results', r.keyResults || 0],
@@ -118,7 +186,7 @@
 
   function renderTree() {
     var filtro = $('dashTrimestre').value;
-    var tree = STATE.tree.filter(function (n) { return !filtro || n.objetivo.trimestre === filtro; });
+    var tree = scoped().tree.filter(function (n) { return !filtro || n.objetivo.trimestre === filtro; });
     if (!tree.length) { $('tree').innerHTML = '<div class="empty">Aún no hay objetivos. Ve a “Registrar OKRs”.</div>'; return; }
     $('tree').innerHTML = tree.map(function (n) {
       var krs = n.keyResults.map(function (kr) {
@@ -134,13 +202,22 @@
           '<span class="pill ' + kr.estado + '">' + kr.progreso + '%</span></div>' +
           bar(kr.progreso, kr.estado) + inisWrap + '</div>';
       }).join('') || '<div class="meta" style="padding:8px 0">Sin Key Results.</div>';
+      var ger = gerNombre(n.objetivo.gerenciaId);
       return '<div class="obj"><div class="obj-head"><div><div class="obj-title">' + esc(n.objetivo.titulo) +
-        '</div><div class="meta">' + esc(n.objetivo.dueno || 'Sin dueño') + ' · ' + esc(n.objetivo.trimestre) + '</div></div>' +
+        '</div><div class="meta">' + esc(n.objetivo.dueno || 'Sin dueño') + ' · ' + esc(n.objetivo.trimestre) +
+        (ger ? ' · ' + esc(ger) : '') + '</div></div>' +
         '<span class="pill ' + n.estado + '">' + n.progreso + '%</span></div>' +
         bar(n.progreso, n.estado) + '<div style="margin-top:8px">' + krs + '</div></div>';
     }).join('');
   }
   document.getElementById('dashTrimestre').addEventListener('change', renderTree);
+
+  // Al cambiar la gerencia activa, re-renderiza todas las vistas y ajusta el
+  // valor por defecto del formulario de objetivo.
+  document.getElementById('gerenciaActiva').addEventListener('change', function () {
+    $('obj_gerenciaId').value = gerenciaActiva() || '';
+    renderViews();
+  });
 
   // ---------- Mapa (árbol / grafo) ----------
   var MAP = {
@@ -261,11 +338,40 @@
 
   function renderMapa() {
     var filtro = $('mapaTrimestre').value;
-    var tree = STATE.tree.filter(function (n) { return !filtro || n.objetivo.trimestre === filtro; });
+    var tree = scoped().tree.filter(function (n) { return !filtro || n.objetivo.trimestre === filtro; });
     if (!tree.length) { $('mapaCanvas').innerHTML = '<div class="empty">Aún no hay objetivos. Ve a “Registrar OKRs”.</div>'; return; }
     $('mapaCanvas').innerHTML = mapaHeader() + tree.map(mapaSvgObjetivo).join('');
   }
   document.getElementById('mapaTrimestre').addEventListener('change', renderMapa);
+
+  // ---------- Gerencias ----------
+  $('gerForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var data = { id: $('ger_id').value, nombre: $('ger_nombre').value };
+    google.script.run
+      .withSuccessHandler(function () { toast('Gerencia guardada'); $('gerForm').reset(); $('ger_id').value = ''; refresh(); })
+      .withFailureHandler(function (err) { toast(err.message || err, true); })
+      .saveGerencia(data);
+  });
+
+  function renderGerencias() {
+    if (!STATE.gerencias.length) { $('gerList').innerHTML = '<div class="meta">Aún no hay gerencias. Añade la primera para poder filtrar por área.</div>'; return; }
+    $('gerList').innerHTML = STATE.gerencias.map(function (g) {
+      return '<span class="chip">' + esc(g.nombre) +
+        ' <a onclick="editGer(\'' + g.id + '\')">editar</a>' +
+        ' <a class="danger" onclick="delGer(\'' + g.id + '\')">✕</a></span>';
+    }).join('');
+  }
+  window.editGer = function (id) {
+    var g = STATE.gerencias.filter(function (x) { return x.id === id; })[0];
+    if (!g) return;
+    $('ger_id').value = g.id; $('ger_nombre').value = g.nombre; $('ger_nombre').focus();
+  };
+  window.delGer = function (id) {
+    if (!confirm('¿Eliminar esta gerencia? Sus objetivos quedarán sin gerencia asignada.')) return;
+    google.script.run.withSuccessHandler(function () { toast('Gerencia eliminada'); refresh(); })
+      .withFailureHandler(function (e) { toast(e.message || e, true); }).deleteGerencia(id);
+  };
 
   // ---------- Registrar OKRs ----------
   $('objForm').addEventListener('submit', function (e) {
@@ -275,14 +381,15 @@
       titulo: $('obj_titulo').value,
       dueno: $('obj_dueno').value,
       trimestre: $('obj_trimestre').value,
-      descripcion: $('obj_descripcion').value
+      descripcion: $('obj_descripcion').value,
+      gerenciaId: $('obj_gerenciaId').value
     };
     google.script.run
-      .withSuccessHandler(function () { toast('Objetivo guardado'); $('objForm').reset(); $('obj_id').value = ''; refresh(); })
+      .withSuccessHandler(function () { toast('Objetivo guardado'); $('objForm').reset(); $('obj_id').value = ''; $('obj_gerenciaId').value = gerenciaActiva() || ''; refresh(); })
       .withFailureHandler(function (err) { toast(err.message || err, true); })
       .saveObjetivo(data);
   });
-  $('objReset').addEventListener('click', function () { $('objForm').reset(); $('obj_id').value = ''; });
+  $('objReset').addEventListener('click', function () { $('objForm').reset(); $('obj_id').value = ''; $('obj_gerenciaId').value = gerenciaActiva() || ''; });
 
   $('krForm').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -304,9 +411,10 @@
   $('krReset').addEventListener('click', function () { $('krForm').reset(); $('kr_id').value = ''; });
 
   function renderOkrList() {
-    if (!STATE.objetivos.length) { $('okrList').innerHTML = '<div class="empty">Sin objetivos aún.</div>'; return; }
-    $('okrList').innerHTML = STATE.objetivos.map(function (o) {
-      var krs = STATE.keyResults.filter(function (k) { return k.objetivoId === o.id; });
+    var S = scoped();
+    if (!S.objetivos.length) { $('okrList').innerHTML = '<div class="empty">Sin objetivos aún.</div>'; return; }
+    $('okrList').innerHTML = S.objetivos.map(function (o) {
+      var krs = S.keyResults.filter(function (k) { return k.objetivoId === o.id; });
       var krHtml = krs.map(function (kr) {
         return '<div class="kr"><div class="kr-row"><div>' + esc(kr.descripcion) + ' <span class="pill ' + kr.estado + '">' + kr.progreso + '%</span></div>' +
           '<div class="row-actions"><button class="ghost" onclick="editKr(\'' + kr.id + '\')">Editar</button>' +
@@ -325,6 +433,7 @@
     if (!o) return;
     $('obj_id').value = o.id; $('obj_titulo').value = o.titulo; $('obj_dueno').value = o.dueno;
     $('obj_trimestre').value = o.trimestre; $('obj_descripcion').value = o.descripcion;
+    $('obj_gerenciaId').value = o.gerenciaId || '';
     $('obj_titulo').scrollIntoView({ behavior: 'smooth' });
   };
   window.delObj = function (id) {
@@ -400,8 +509,9 @@
     return kr ? kr.descripcion : krId;
   }
   function renderIniciativas() {
-    if (!STATE.iniciativas.length) { $('iniList').innerHTML = '<div class="empty">Sin iniciativas aún.</div>'; return; }
-    var rows = STATE.iniciativas.map(function (i) {
+    var inis = scoped().iniciativas;
+    if (!inis.length) { $('iniList').innerHTML = '<div class="empty">Sin iniciativas aún.</div>'; return; }
+    var rows = inis.map(function (i) {
       return '<tr><td><span class="dot ' + i.estado + '"></span>' + esc(i.titulo) + '</td>' +
         '<td>' + esc(krDescById(i.krId)) + '</td>' +
         '<td>' + esc(smNombre(i.scrumMasterId) || '—') + '</td>' +
@@ -448,8 +558,9 @@
     return kr ? kr.descripcion : krId;
   }
   function renderCheckins() {
-    if (!STATE.checkins.length) { $('chkList').innerHTML = '<div class="empty">Sin check-ins aún.</div>'; return; }
-    var rows = STATE.checkins.map(function (c) {
+    var checkins = scoped().checkins;
+    if (!checkins.length) { $('chkList').innerHTML = '<div class="empty">Sin check-ins aún.</div>'; return; }
+    var rows = checkins.map(function (c) {
       return '<tr><td>' + esc(c.fecha) + '</td><td>' + esc(krDesc(c.krId)) + '</td><td>' + esc(c.valor) +
         '</td><td>' + esc(c.progreso) + '%</td><td>' + esc(c.confianza) + '</td><td>' + esc(c.comentario || '') +
         '</td><td><button class="ghost danger" onclick="delChk(\'' + c.id + '\')">✕</button></td></tr>';
@@ -476,7 +587,7 @@
         toast('Reporte generado');
       })
       .withFailureHandler(function (err) { $('repResult').innerHTML = ''; toast(err.message || err, true); })
-      .generarReporteTrimestre(t);
+      .generarReporteTrimestre(t, gerenciaActiva());
   });
 
   bootstrap();

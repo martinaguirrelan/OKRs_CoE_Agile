@@ -52,6 +52,7 @@ function getBootstrapData() {
     checkins: listCheckins(),
     iniciativas: listIniciativas(),
     scrumMasters: listScrumMasters(),
+    gerencias: listGerencias(),
     trimestres: trimestres,
     resumen: resumen_(tree),
     generadoEn: new Date().toISOString()
@@ -96,11 +97,17 @@ function uniqueSorted_(arr) {
  * Genera un reporte del trimestre en una hoja nueva "Reporte {trimestre}" y
  * devuelve la URL directa a esa hoja para abrirla/exportarla.
  */
-function generarReporteTrimestre(trimestre) {
+function generarReporteTrimestre(trimestre, gerenciaId) {
   if (!trimestre) throw new Error('Indica un trimestre para el reporte.');
-  const tree = buildOkrTree_(trimestre);
+  let tree = buildOkrTree_(trimestre);
+  let sufijoGerencia = '';
+  if (gerenciaId) {
+    tree = tree.filter(function (n) { return String(n.objetivo.gerenciaId) === String(gerenciaId); });
+    const ger = listGerencias().filter(function (g) { return String(g.id) === String(gerenciaId); })[0];
+    if (ger) sufijoGerencia = ' - ' + ger.nombre;
+  }
   const ss = getSpreadsheet_();
-  const nombre = 'Reporte ' + trimestre;
+  const nombre = ('Reporte ' + trimestre + sufijoGerencia).slice(0, 90);
   let sheet = ss.getSheetByName(nombre);
   if (sheet) ss.deleteSheet(sheet);
   sheet = ss.insertSheet(nombre);

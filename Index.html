@@ -6,8 +6,14 @@
 </head>
 <body>
   <header>
-    <h1>OKRs · Centro de Excelencia Ágil</h1>
-    <p>Registra objetivos, sigue el avance y reporta por trimestre</p>
+    <div class="head-main">
+      <h1>OKRs · Centro de Excelencia Ágil</h1>
+      <p>Registra objetivos, sigue el avance y reporta por trimestre</p>
+    </div>
+    <div class="head-ger">
+      <label for="gerenciaActiva">Gerencia</label>
+      <select id="gerenciaActiva"><option value="">Todas</option></select>
+    </div>
   </header>
 
   <nav class="tabs">
@@ -51,6 +57,19 @@
 
     <!-- REGISTRAR OKRs -->
     <section id="okrs" class="view">
+      <form id="gerForm">
+        <h2>Gerencias</h2>
+        <div class="inline">
+          <div style="flex:1">
+            <label>Nombre *</label>
+            <input id="ger_nombre" placeholder="Ej. Gerencia de Transformación Digital">
+          </div>
+          <button type="submit" class="primary">Añadir</button>
+        </div>
+        <input type="hidden" id="ger_id">
+        <div id="gerList" style="margin-top:12px"></div>
+      </form>
+
       <form id="objForm">
         <h2>Nuevo objetivo</h2>
         <input type="hidden" id="obj_id">
@@ -60,13 +79,20 @@
         </div>
         <div class="grid2">
           <div class="field">
+            <label>Gerencia</label>
+            <select id="obj_gerenciaId"></select>
+          </div>
+          <div class="field">
             <label>Dueño</label>
             <input id="obj_dueno" placeholder="Nombre / rol">
           </div>
+        </div>
+        <div class="grid2">
           <div class="field">
             <label>Trimestre *</label>
             <input id="obj_trimestre" placeholder="2026-Q3">
           </div>
+          <div class="field"></div>
         </div>
         <div class="field">
           <label>Descripción</label>

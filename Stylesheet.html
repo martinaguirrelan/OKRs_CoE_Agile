@@ -23,9 +23,21 @@
     background: linear-gradient(120deg, var(--brand), #7c3aed);
     color: #fff;
     padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
   }
   header h1 { margin: 0; font-size: 18px; }
   header p { margin: 4px 0 0; opacity: .85; font-size: 12px; }
+  .head-ger { display: flex; flex-direction: column; gap: 4px; min-width: 200px; }
+  .head-ger label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; opacity: .85; font-weight: 700; }
+  .head-ger select {
+    background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.35);
+    border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit;
+  }
+  .head-ger select option { color: #0f172a; }
   .tabs { display: flex; gap: 4px; padding: 0 12px; background: #fff; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
   .tab {
     padding: 12px 14px; cursor: pointer; border: none; background: none;

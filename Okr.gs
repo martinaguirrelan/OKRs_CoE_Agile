@@ -39,7 +39,8 @@ function saveObjetivo(data) {
     trimestre: (data.trimestre || '').trim(),
     estado: data.estado || 'activo',
     descripcion: (data.descripcion || '').trim(),
-    creadoEn: data.creadoEn || new Date().toISOString()
+    creadoEn: data.creadoEn || new Date().toISOString(),
+    gerenciaId: data.gerenciaId || ''
   };
   if (!obj.titulo) throw new Error('El objetivo necesita un título.');
   if (!obj.trimestre) throw new Error('El objetivo necesita un trimestre (ej. 2026-Q3).');
