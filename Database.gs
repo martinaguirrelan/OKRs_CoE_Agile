@@ -22,7 +22,7 @@ const SHEETS = {
     headers: ['id', 'krId', 'titulo', 'scrumMasterId', 'estado', 'sprint', 'descripcion', 'creadoEn']
   },
   SCRUM_MASTERS: {
-    name: 'ScrumMasters',
+    name: 'Agilistas',
     headers: ['id', 'nombre', 'equipo']
   }
 };
@@ -36,8 +36,22 @@ function getSpreadsheet_() {
  * Garantiza que existan todas las hojas con sus cabeceras.
  * Idempotente: se puede ejecutar tantas veces como se quiera.
  */
+/**
+ * Migraciones idempotentes de estructura (renombres de hojas, etc.).
+ * Se ejecuta antes de garantizar las hojas.
+ */
+function migrateSheets_() {
+  const ss = getSpreadsheet_();
+  // ScrumMasters -> Agilistas (conserva los datos existentes).
+  const antigua = ss.getSheetByName('ScrumMasters');
+  if (antigua && !ss.getSheetByName('Agilistas')) {
+    antigua.setName('Agilistas');
+  }
+}
+
 function setupSpreadsheet() {
   const ss = getSpreadsheet_();
+  migrateSheets_();
   Object.keys(SHEETS).forEach(function (key) {
     const def = SHEETS[key];
     let sheet = ss.getSheetByName(def.name);
