@@ -9,7 +9,17 @@ function onOpen() {
     .createMenu('OKRs CoE')
     .addItem('Inicializar hojas', 'setupSpreadsheet')
     .addItem('Abrir panel (sidebar)', 'abrirSidebar')
+    .addSeparator()
+    .addItem('Asignar "CoE Ágil" a objetivos sin gerencia', 'menuAsignarCoE')
     .addToUi();
+}
+
+/** Acción de menú: asigna la gerencia "CoE Ágil" a los objetivos sin gerencia. */
+function menuAsignarCoE() {
+  const res = asignarGerenciaAObjetivosSinGerencia('CoE Ágil');
+  SpreadsheetApp.getUi().alert(
+    'Gerencia "' + res.gerencia.nombre + '" asignada a ' + res.asignados +
+    ' objetivo(s) que estaban sin gerencia.');
 }
 
 /** Abre la interfaz dentro del propio Spreadsheet como sidebar. */
