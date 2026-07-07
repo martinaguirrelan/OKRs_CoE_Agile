@@ -83,6 +83,11 @@
 
   function renderAll() {
     var tri = trimestresDeObjetivos();
+    var id = STATE.identidad || {};
+    var idEl = $('identidad');
+    if (idEl) idEl.textContent = id.activeEmail
+      ? 'Conectado como: ' + id.activeEmail
+      : 'Identidad no detectada (email vacío)';
     fillGerenciaSelects();
     fillObjTrimestreSelect();
     fillSelect($('dashTrimestre'), tri, 'Todos');

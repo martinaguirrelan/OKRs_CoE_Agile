@@ -55,8 +55,22 @@ function getBootstrapData() {
     gerencias: listGerencias(),
     trimestres: trimestres,
     resumen: resumen_(tree),
+    identidad: detectarIdentidad_(),
     generadoEn: new Date().toISOString()
   };
+}
+
+/**
+ * Detecta el email del usuario que accede. Con propietario en otro dominio
+ * (gmail) y usuarios de Workspace, getActiveUser() suele venir vacío: eso
+ * confirma que hace falta alojar el proyecto bajo el dominio corporativo
+ * para aplicar permisos reales por gerencia.
+ */
+function detectarIdentidad_() {
+  let activo = '', efectivo = '';
+  try { activo = Session.getActiveUser().getEmail() || ''; } catch (e) {}
+  try { efectivo = Session.getEffectiveUser().getEmail() || ''; } catch (e) {}
+  return { activeEmail: activo, effectiveEmail: efectivo };
 }
 
 function resumen_(tree) {
