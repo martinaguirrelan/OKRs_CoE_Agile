@@ -32,6 +32,10 @@ function listObjetivos() {
 }
 
 function saveObjetivo(data) {
+  // Permisos: al editar, debe poder editar la gerencia actual del objetivo;
+  // en todo caso, la gerencia destino.
+  if (data.id) assertEditarGerencia_(gerenciaDeObjetivo_(data.id));
+  assertEditarGerencia_(data.gerenciaId || '');
   const obj = {
     id: data.id || newId_('obj'),
     titulo: (data.titulo || '').trim(),
@@ -49,6 +53,7 @@ function saveObjetivo(data) {
 
 /** Elimina un objetivo y todos sus KRs (y check-ins asociados). */
 function deleteObjetivo(id) {
+  assertEditarGerencia_(gerenciaDeObjetivo_(id));
   const krs = readAll_(SHEETS.KEY_RESULTS).filter(function (kr) {
     return String(kr.objetivoId) === String(id);
   });
@@ -63,10 +68,11 @@ function listKeyResults() {
 }
 
 function saveKeyResult(data) {
+  if (!data.objetivoId) throw new Error('El Key Result debe pertenecer a un objetivo.');
+  assertEditarGerencia_(gerenciaDeObjetivo_(data.objetivoId));
   const baseline = Number(data.baseline) || 0;
   const meta = Number(data.meta);
   const actual = data.actual === '' || data.actual === undefined ? baseline : Number(data.actual);
-  if (!data.objetivoId) throw new Error('El Key Result debe pertenecer a un objetivo.');
   if (!(data.descripcion || '').trim()) throw new Error('El Key Result necesita una descripción.');
   if (isNaN(meta)) throw new Error('El Key Result necesita una meta numérica.');
 
@@ -89,6 +95,7 @@ function saveKeyResult(data) {
 
 /** Elimina un KR, sus check-ins y sus iniciativas. */
 function deleteKeyResult(id) {
+  assertEditarGerencia_(gerenciaDeKR_(id));
   const checkins = readAll_(SHEETS.CHECKINS).filter(function (c) {
     return String(c.krId) === String(id);
   });

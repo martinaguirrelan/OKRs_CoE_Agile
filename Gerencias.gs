@@ -11,6 +11,7 @@ function listGerencias() {
 }
 
 function saveGerencia(data) {
+  assertAdmin_();
   const g = {
     id: data.id || newId_('ger'),
     nombre: (data.nombre || '').trim()
@@ -45,6 +46,7 @@ function asignarGerenciaAObjetivosSinGerencia(nombreGerencia) {
  * gerencia (gerenciaId vacío) para no perder datos.
  */
 function deleteGerencia(id) {
+  assertAdmin_();
   const objetivos = readAll_(SHEETS.OBJETIVOS).filter(function (o) {
     return String(o.gerenciaId) === String(id);
   });

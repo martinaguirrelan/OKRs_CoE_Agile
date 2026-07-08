@@ -10,6 +10,7 @@ function listScrumMasters() {
 }
 
 function saveScrumMaster(data) {
+  assertPuedeEscribir_();
   const sm = {
     id: data.id || newId_('sm'),
     nombre: (data.nombre || '').trim(),
@@ -24,6 +25,7 @@ function saveScrumMaster(data) {
  * quedan sin asignar (scrumMasterId vacío) para no perder datos.
  */
 function deleteScrumMaster(id) {
+  assertPuedeEscribir_();
   const iniciativas = readAll_(SHEETS.INICIATIVAS).filter(function (i) {
     return String(i.scrumMasterId) === String(id);
   });

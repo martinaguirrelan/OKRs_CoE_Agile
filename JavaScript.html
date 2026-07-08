@@ -1,6 +1,15 @@
 <script>
   // Estado en memoria del cliente.
-  var STATE = { objetivos: [], keyResults: [], checkins: [], iniciativas: [], scrumMasters: [], gerencias: [], tree: [], trimestres: [], resumen: {} };
+  var STATE = { objetivos: [], keyResults: [], checkins: [], iniciativas: [], scrumMasters: [], gerencias: [], usuarios: [], usuario: { rol: 'admin' }, tree: [], trimestres: [], resumen: {} };
+
+  function rolActual() { return (STATE.usuario || {}).rol || 'lector'; }
+  function esAdmin() { return rolActual() === 'admin'; }
+  function puedeEditar() { var r = rolActual(); return r === 'admin' || r === 'editor'; }
+  // Gerencia por defecto al crear objetivos: admin usa el filtro activo; el
+  // resto queda fijado a su propia gerencia.
+  function gerenciaDefault() {
+    return esAdmin() ? (gerenciaActiva() || '') : ((STATE.usuario || {}).gerenciaId || '');
+  }
 
   var ESTADO_INI_LABEL = { 'pendiente': 'Pendiente', 'en-progreso': 'En progreso', 'bloqueada': 'Bloqueada', 'hecha': 'Hecha' };
 
@@ -82,12 +91,8 @@
   }
 
   function renderAll() {
+    aplicarRol();
     var tri = trimestresDeObjetivos();
-    var id = STATE.identidad || {};
-    var idEl = $('identidad');
-    if (idEl) idEl.textContent = id.activeEmail
-      ? 'Conectado como: ' + id.activeEmail
-      : 'Identidad no detectada (email vacío)';
     fillGerenciaSelects();
     fillObjTrimestreSelect();
     fillSelect($('dashTrimestre'), tri, 'Todos');
@@ -97,9 +102,37 @@
       $('rep_trimestre').innerHTML = '<option value="">— Crea un objetivo para ver trimestres —</option>';
     }
     fillScrumMasterSelect();
+    fillUsuarioGerenciaSelect();
     renderGerencias();
     renderScrumMasters();
+    renderUsuarios();
     renderViews();
+  }
+
+  // Aplica el rol del usuario a la interfaz: clase de body, cabecera, aviso
+  // de sin-acceso y visibilidad del selector de gerencia.
+  function aplicarRol() {
+    var u = STATE.usuario || {};
+    var rol = rolActual();
+    document.body.className = 'rol-' + rol;
+
+    var idEl = $('identidad');
+    if (idEl) {
+      var ger = u.gerenciaId ? gerNombre(u.gerenciaId) : '';
+      var partes = [];
+      if (u.email) partes.push(u.email);
+      partes.push('rol: ' + rol + (ger ? ' · ' + ger : ''));
+      idEl.textContent = partes.join(' · ');
+    }
+
+    // El selector de gerencia solo tiene sentido para admin (ve varias).
+    var gsel = $('gerenciaActiva');
+    var glabel = document.querySelector('.head-ger label');
+    if (gsel) gsel.style.display = esAdmin() ? '' : 'none';
+    if (glabel) glabel.style.display = esAdmin() ? '' : 'none';
+    if (!esAdmin() && gsel) gsel.value = '';
+    // El aviso de "sin acceso" y el ocultamiento de pestañas/vistas se
+    // controlan por CSS a partir de la clase body.rol-sin-acceso.
   }
 
   // Re-render de todas las vistas dependientes de la gerencia activa.
@@ -158,7 +191,17 @@
     objSel.innerHTML = '<option value="">— Sin gerencia —</option>' + STATE.gerencias.map(function (g) {
       return '<option value="' + esc(g.id) + '">' + esc(g.nombre) + '</option>';
     }).join('');
-    objSel.value = currentObj || gerenciaActiva() || '';
+    objSel.value = currentObj || gerenciaDefault();
+  }
+
+  function fillUsuarioGerenciaSelect() {
+    var sel = $('usu_gerenciaId');
+    if (!sel) return;
+    var current = sel.value;
+    sel.innerHTML = '<option value="">— Sin gerencia —</option>' + STATE.gerencias.map(function (g) {
+      return '<option value="' + esc(g.id) + '">' + esc(g.nombre) + '</option>';
+    }).join('');
+    if (current) sel.value = current;
   }
 
   // Rellena un <select> con una lista de valores (opción "Todos" opcional),
@@ -272,7 +315,7 @@
   // Al cambiar la gerencia activa, re-renderiza todas las vistas y ajusta el
   // valor por defecto del formulario de objetivo.
   document.getElementById('gerenciaActiva').addEventListener('change', function () {
-    $('obj_gerenciaId').value = gerenciaActiva() || '';
+    $('obj_gerenciaId').value = gerenciaDefault();
     renderViews();
   });
 
@@ -430,6 +473,36 @@
       .withFailureHandler(function (e) { toast(e.message || e, true); }).deleteGerencia(id);
   };
 
+  // ---------- Usuarios y permisos (solo admin) ----------
+  $('usuForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var data = { email: $('usu_email').value, rol: $('usu_rol').value, gerenciaId: $('usu_gerenciaId').value };
+    google.script.run
+      .withSuccessHandler(function () { toast('Usuario guardado'); $('usuForm').reset(); refresh(); })
+      .withFailureHandler(function (err) { toast(err.message || err, true); })
+      .saveUsuario(data);
+  });
+
+  function renderUsuarios() {
+    var cont = $('usuList');
+    if (!cont) return;
+    if (!STATE.usuarios.length) {
+      cont.innerHTML = '<div class="meta">Aún no hay usuarios. Mientras esté vacío, todos entran como admin. Agrega el primero para activar el control por gerencia.</div>';
+      return;
+    }
+    var rows = STATE.usuarios.map(function (u) {
+      return '<tr><td>' + esc(u.email) + '</td><td>' + esc(u.rol) + '</td><td>' +
+        esc(gerNombre(u.gerenciaId) || '—') + '</td>' +
+        '<td><button class="ghost danger" onclick="delUsu(\'' + esc(u.email) + '\')">✕</button></td></tr>';
+    }).join('');
+    cont.innerHTML = '<table><thead><tr><th>Email</th><th>Rol</th><th>Gerencia</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+  window.delUsu = function (email) {
+    if (!confirm('¿Quitar el acceso de ' + email + '?')) return;
+    google.script.run.withSuccessHandler(function () { toast('Usuario eliminado'); refresh(); })
+      .withFailureHandler(function (e) { toast(e.message || e, true); }).deleteUsuario(email);
+  };
+
   // ---------- Registrar OKRs ----------
   $('objForm').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -442,11 +515,11 @@
       gerenciaId: $('obj_gerenciaId').value
     };
     google.script.run
-      .withSuccessHandler(function () { toast('Objetivo guardado'); $('objForm').reset(); $('obj_id').value = ''; $('obj_gerenciaId').value = gerenciaActiva() || ''; $('obj_trimestre').value = trimestreActualCliente(); refresh(); })
+      .withSuccessHandler(function () { toast('Objetivo guardado'); $('objForm').reset(); $('obj_id').value = ''; $('obj_gerenciaId').value = gerenciaDefault(); $('obj_trimestre').value = trimestreActualCliente(); refresh(); })
       .withFailureHandler(function (err) { toast(err.message || err, true); })
       .saveObjetivo(data);
   });
-  $('objReset').addEventListener('click', function () { $('objForm').reset(); $('obj_id').value = ''; $('obj_gerenciaId').value = gerenciaActiva() || ''; $('obj_trimestre').value = trimestreActualCliente(); });
+  $('objReset').addEventListener('click', function () { $('objForm').reset(); $('obj_id').value = ''; $('obj_gerenciaId').value = gerenciaDefault(); $('obj_trimestre').value = trimestreActualCliente(); });
 
   $('krForm').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -475,13 +548,15 @@
       var krs = S.keyResults.filter(function (k) { return k.objetivoId === o.id; });
       var krHtml = krs.map(function (kr) {
         var med = kr.medicion ? '<div class="kr-medicion">ƒ ' + esc(kr.medicion) + '</div>' : '';
+        var acc = puedeEditar() ? '<div class="row-actions"><button class="ghost" onclick="editKr(\'' + kr.id + '\')">Editar</button>' +
+          '<button class="ghost danger" onclick="delKr(\'' + kr.id + '\')">Eliminar</button></div>' : '';
         return '<div class="kr"><div class="kr-row"><div>' + esc(kr.descripcion) + ' <span class="pill ' + kr.estado + '">' + kr.progreso + '%</span></div>' +
-          '<div class="row-actions"><button class="ghost" onclick="editKr(\'' + kr.id + '\')">Editar</button>' +
-          '<button class="ghost danger" onclick="delKr(\'' + kr.id + '\')">Eliminar</button></div></div>' + med + '</div>';
+          acc + '</div>' + med + '</div>';
       }).join('') || '<div class="meta" style="padding:6px 0">Sin KRs.</div>';
+      var accObj = puedeEditar() ? '<div class="row-actions"><button class="ghost" onclick="editObj(\'' + o.id + '\')">Editar</button>' +
+        '<button class="ghost danger" onclick="delObj(\'' + o.id + '\')">Eliminar</button></div>' : '';
       return '<div class="obj"><div class="obj-head"><div class="obj-title">' + esc(o.titulo) + '</div>' +
-        '<div class="row-actions"><button class="ghost" onclick="editObj(\'' + o.id + '\')">Editar</button>' +
-        '<button class="ghost danger" onclick="delObj(\'' + o.id + '\')">Eliminar</button></div></div>' +
+        accObj + '</div>' +
         '<div class="meta">' + esc(o.dueno || 'Sin dueño') + ' · ' + esc(o.trimestre) + '</div>' +
         '<div style="margin-top:8px">' + krHtml + '</div></div>';
     }).join('');
@@ -570,14 +645,15 @@
   function renderIniciativas() {
     var inis = scoped().iniciativas;
     if (!inis.length) { $('iniList').innerHTML = '<div class="empty">Sin iniciativas aún.</div>'; return; }
+    var editable = puedeEditar();
     var rows = inis.map(function (i) {
+      var acc = editable ? '<td><div class="row-actions"><button class="ghost" onclick="editIni(\'' + i.id + '\')">Editar</button>' +
+        '<button class="ghost danger" onclick="delIni(\'' + i.id + '\')">✕</button></div></td>' : '<td></td>';
       return '<tr><td><span class="dot ' + i.estado + '"></span>' + esc(i.titulo) + '</td>' +
         '<td>' + esc(krDescById(i.krId)) + '</td>' +
         '<td>' + esc(smNombre(i.scrumMasterId) || '—') + '</td>' +
         '<td>' + esc(ESTADO_INI_LABEL[i.estado] || i.estado) + '</td>' +
-        '<td>' + esc(i.sprint || '') + '</td>' +
-        '<td><div class="row-actions"><button class="ghost" onclick="editIni(\'' + i.id + '\')">Editar</button>' +
-        '<button class="ghost danger" onclick="delIni(\'' + i.id + '\')">✕</button></div></td></tr>';
+        '<td>' + esc(i.sprint || '') + '</td>' + acc + '</tr>';
     }).join('');
     $('iniList').innerHTML = '<table><thead><tr><th>Iniciativa</th><th>Key Result</th><th>Agilista</th><th>Estado</th><th>Sprint</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
@@ -619,10 +695,12 @@
   function renderCheckins() {
     var checkins = scoped().checkins;
     if (!checkins.length) { $('chkList').innerHTML = '<div class="empty">Sin check-ins aún.</div>'; return; }
+    var editable = puedeEditar();
     var rows = checkins.map(function (c) {
+      var acc = editable ? '<td><button class="ghost danger" onclick="delChk(\'' + c.id + '\')">✕</button></td>' : '<td></td>';
       return '<tr><td>' + esc(c.fecha) + '</td><td>' + esc(krDesc(c.krId)) + '</td><td>' + esc(c.valor) +
         '</td><td>' + esc(c.progreso) + '%</td><td>' + esc(c.confianza) + '</td><td>' + esc(c.comentario || '') +
-        '</td><td><button class="ghost danger" onclick="delChk(\'' + c.id + '\')">✕</button></td></tr>';
+        '</td>' + acc + '</tr>';
     }).join('');
     $('chkList').innerHTML = '<table><thead><tr><th>Fecha</th><th>Key Result</th><th>Valor</th><th>Progreso</th><th>Confianza</th><th>Comentario</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
   }

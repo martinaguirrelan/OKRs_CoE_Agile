@@ -30,6 +30,10 @@ const SHEETS = {
   GERENCIAS: {
     name: 'Gerencias',
     headers: ['id', 'nombre']
+  },
+  USUARIOS: {
+    name: 'Usuarios',
+    headers: ['email', 'gerenciaId', 'rol']
   }
 };
 

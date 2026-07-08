@@ -20,6 +20,7 @@ function listCheckinsByKR(krId) {
  */
 function addCheckin(data) {
   if (!data.krId) throw new Error('El check-in debe referirse a un Key Result.');
+  assertEditarGerencia_(gerenciaDeKR_(data.krId));
   const kr = readAll_(SHEETS.KEY_RESULTS).filter(function (k) {
     return String(k.id) === String(data.krId);
   })[0];
@@ -51,5 +52,7 @@ function addCheckin(data) {
 }
 
 function deleteCheckin(id) {
+  const c = readAll_(SHEETS.CHECKINS).filter(function (x) { return String(x.id) === String(id); })[0];
+  if (c) assertEditarGerencia_(gerenciaDeKR_(c.krId));
   return remove_(SHEETS.CHECKINS, id);
 }

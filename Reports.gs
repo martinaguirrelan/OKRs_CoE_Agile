@@ -40,21 +40,47 @@ function buildOkrTree_(trimestre) {
   });
 }
 
-/** Datos que consume la Web App al cargar. */
+/** Datos que consume la Web App al cargar, filtrados según el rol del usuario. */
 function getBootstrapData() {
   setupSpreadsheet();
-  const tree = buildOkrTree_(null);
-  const trimestres = uniqueSorted_(listObjetivos().map(function (o) { return o.trimestre; }));
+  const usuario = getUsuarioActual_();
+  const esAdmin = usuario.rol === ROLES.ADMIN;
+  const sinAcceso = usuario.rol === ROLES.SIN_ACCESO;
+
+  // ¿Es visible un objetivo para este usuario? (admin=todo, sin-acceso=nada,
+  // resto=solo su gerencia).
+  function objVisible(o) {
+    if (esAdmin) return true;
+    if (sinAcceso) return false;
+    return !!usuario.gerenciaId && String(o.gerenciaId) === String(usuario.gerenciaId);
+  }
+
+  const objetivos = listObjetivos().filter(objVisible);
+  const objIds = {}; objetivos.forEach(function (o) { objIds[o.id] = true; });
+  const keyResults = listKeyResults().filter(function (k) { return objIds[k.objetivoId]; });
+  const krIds = {}; keyResults.forEach(function (k) { krIds[k.id] = true; });
+  const iniciativas = listIniciativas().filter(function (i) { return krIds[i.krId]; });
+  const checkins = listCheckins().filter(function (c) { return krIds[c.krId]; });
+  const tree = buildOkrTree_(null).filter(function (n) { return objVisible(n.objetivo); });
+  const trimestres = uniqueSorted_(objetivos.map(function (o) { return o.trimestre; }));
+
+  // Catálogos: admin ve todas las gerencias; el resto solo la suya.
+  const gerencias = esAdmin ? listGerencias() : listGerencias().filter(function (g) {
+    return String(g.id) === String(usuario.gerenciaId);
+  });
+
   return {
     tree: tree,
-    objetivos: listObjetivos(),
-    keyResults: listKeyResults(),
-    checkins: listCheckins(),
-    iniciativas: listIniciativas(),
+    objetivos: objetivos,
+    keyResults: keyResults,
+    checkins: checkins,
+    iniciativas: iniciativas,
     scrumMasters: listScrumMasters(),
-    gerencias: listGerencias(),
+    gerencias: gerencias,
     trimestres: trimestres,
     resumen: resumen_(tree),
+    usuario: usuario,
+    usuarios: esAdmin ? listUsuarios() : [],
     identidad: detectarIdentidad_(),
     generadoEn: new Date().toISOString()
   };
@@ -113,6 +139,10 @@ function uniqueSorted_(arr) {
  */
 function generarReporteTrimestre(trimestre, gerenciaId) {
   if (!trimestre) throw new Error('Indica un trimestre para el reporte.');
+  // Los no-admin solo pueden reportar su propia gerencia (evita fuga de datos).
+  const usuario = getUsuarioActual_();
+  if (usuario.rol === ROLES.SIN_ACCESO) throw new Error('No tienes acceso.');
+  if (usuario.rol !== ROLES.ADMIN) gerenciaId = usuario.gerenciaId;
   let tree = buildOkrTree_(trimestre);
   let sufijoGerencia = '';
   if (gerenciaId) {

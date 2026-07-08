@@ -27,6 +27,11 @@
   </nav>
 
   <main>
+    <div id="sinAcceso" class="sin-acceso" style="display:none">
+      <h2>Sin acceso asignado</h2>
+      <p>Tu usuario aún no tiene una gerencia asignada en esta herramienta. Contacta al administrador para que te dé acceso.</p>
+    </div>
+
     <!-- DASHBOARD -->
     <section id="dashboard" class="view active">
       <div class="inline" style="margin-bottom:12px">
@@ -58,7 +63,7 @@
 
     <!-- REGISTRAR OKRs -->
     <section id="okrs" class="view">
-      <form id="gerForm">
+      <form id="gerForm" class="form-edicion solo-admin">
         <h2>Gerencias</h2>
         <div class="inline">
           <div style="flex:1">
@@ -71,7 +76,31 @@
         <div id="gerList" style="margin-top:12px"></div>
       </form>
 
-      <form id="objForm">
+      <form id="usuForm" class="form-edicion solo-admin">
+        <h2>Usuarios y permisos</h2>
+        <div class="grid2">
+          <div class="field">
+            <label>Email *</label>
+            <input id="usu_email" placeholder="persona@interseguro.com.pe">
+          </div>
+          <div class="field">
+            <label>Rol *</label>
+            <select id="usu_rol">
+              <option value="admin">Admin (todo)</option>
+              <option value="editor" selected>Editor (su gerencia)</option>
+              <option value="lector">Lector (solo lectura)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Gerencia (requerida para editor y lector)</label>
+          <select id="usu_gerenciaId"></select>
+        </div>
+        <button type="submit" class="primary">Guardar usuario</button>
+        <div id="usuList" style="margin-top:12px"></div>
+      </form>
+
+      <form id="objForm" class="form-edicion">
         <h2>Nuevo objetivo</h2>
         <input type="hidden" id="obj_id">
         <div class="field">
@@ -103,7 +132,7 @@
         <button type="button" class="ghost" id="objReset">Limpiar</button>
       </form>
 
-      <form id="krForm">
+      <form id="krForm" class="form-edicion">
         <h2>Nuevo Key Result</h2>
         <input type="hidden" id="kr_id">
         <div class="field">
@@ -140,7 +169,7 @@
 
     <!-- INICIATIVAS -->
     <section id="iniciativas" class="view">
-      <form id="smForm">
+      <form id="smForm" class="form-edicion">
         <h2>Agilistas</h2>
         <div class="inline">
           <div style="flex:1">
@@ -157,7 +186,7 @@
         <div id="smList" style="margin-top:12px"></div>
       </form>
 
-      <form id="iniForm">
+      <form id="iniForm" class="form-edicion">
         <h2>Nueva iniciativa</h2>
         <input type="hidden" id="ini_id">
         <div class="field">
@@ -201,7 +230,7 @@
 
     <!-- CHECK-INS -->
     <section id="checkins" class="view">
-      <form id="chkForm">
+      <form id="chkForm" class="form-edicion">
         <h2>Registrar check-in</h2>
         <div class="field">
           <label>Key Result *</label>

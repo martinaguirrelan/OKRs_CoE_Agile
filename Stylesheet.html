@@ -38,6 +38,25 @@
     border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit;
   }
   .head-ger select option { color: #0f172a; }
+
+  /* Control de acceso por rol */
+  body.rol-lector .form-edicion,
+  body.rol-sin-acceso .form-edicion { display: none !important; }
+  body:not(.rol-admin) .solo-admin { display: none !important; }
+  body.rol-sin-acceso .tabs,
+  body.rol-sin-acceso .view { display: none !important; }
+  body.rol-sin-acceso #sinAcceso { display: block !important; }
+  .sin-acceso {
+    background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--amber);
+    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 16px;
+  }
+  .sin-acceso h2 { margin: 0 0 6px; }
+  .sin-acceso p { margin: 0; color: var(--muted); }
+  .rol-badge {
+    display: inline-block; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35);
+    color: #fff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    padding: 1px 7px; border-radius: 999px; margin-left: 6px;
+  }
   .tabs { display: flex; gap: 4px; padding: 0 12px; background: #fff; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
   .tab {
     padding: 12px 14px; cursor: pointer; border: none; background: none;

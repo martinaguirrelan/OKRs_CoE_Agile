@@ -16,6 +16,7 @@ function listIniciativasByKR(krId) {
 
 function saveIniciativa(data) {
   if (!data.krId) throw new Error('La iniciativa debe pertenecer a un Key Result.');
+  assertEditarGerencia_(gerenciaDeKR_(data.krId));
   if (!(data.titulo || '').trim()) throw new Error('La iniciativa necesita un título.');
   const estado = ESTADOS_INICIATIVA.indexOf(data.estado) !== -1 ? data.estado : 'pendiente';
   const ini = {
@@ -32,5 +33,7 @@ function saveIniciativa(data) {
 }
 
 function deleteIniciativa(id) {
+  const i = readAll_(SHEETS.INICIATIVAS).filter(function (x) { return String(x.id) === String(id); })[0];
+  if (i) assertEditarGerencia_(gerenciaDeKR_(i.krId));
   return remove_(SHEETS.INICIATIVAS, id);
 }
