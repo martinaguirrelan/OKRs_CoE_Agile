@@ -12,7 +12,27 @@ function onOpen() {
     .addSeparator()
     .addItem('Asignar "CoE Ágil" a objetivos sin gerencia', 'menuAsignarCoE')
     .addItem('Cargar OKRs de ejemplo (CoE Ágil)', 'menuSembrarOKRs')
+    .addSeparator()
+    .addItem('Registrar administrador…', 'menuAgregarAdmin')
     .addToUi();
+}
+
+/**
+ * Acción de menú: registra un email como administrador. Útil para dar de alta
+ * al primer admin (p. ej. tu cuenta corporativa) sin riesgo de bloqueo, ya que
+ * el menú lo ejecuta el propietario (siempre admin).
+ */
+function menuAgregarAdmin() {
+  const ui = SpreadsheetApp.getUi();
+  const resp = ui.prompt(
+    'Registrar administrador',
+    'Email de la persona que será administrador (verá y editará todas las gerencias):',
+    ui.ButtonSet.OK_CANCEL);
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+  const email = (resp.getResponseText() || '').trim();
+  if (!email) { ui.alert('No se ingresó ningún email.'); return; }
+  saveUsuario({ email: email, rol: 'admin', gerenciaId: '' });
+  ui.alert('Listo', 'Se registró "' + email.toLowerCase() + '" como administrador.', ui.ButtonSet.OK);
 }
 
 /** Acción de menú: asigna la gerencia "CoE Ágil" a los objetivos sin gerencia. */
